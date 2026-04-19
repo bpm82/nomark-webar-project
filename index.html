@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WebAR プロジェクト</title>
   <style>
     * {
@@ -11,35 +11,41 @@
       box-sizing: border-box;
     }
 
-    body {
+    html, body {
+      width: 100%;
+      height: 100%;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    body {
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      min-height: 100vh;
       display: flex;
       align-items: center;
       justify-content: center;
+      padding: 20px;
+      min-height: 100vh;
     }
 
     .container {
       background: white;
       border-radius: 20px;
-      padding: 40px 30px;
+      padding: 30px 20px;
       box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
       max-width: 500px;
-      width: 90%;
+      width: 100%;
       text-align: center;
     }
 
     h1 {
-      font-size: 32px;
+      font-size: 28px;
       color: #333;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
 
     .subtitle {
-      font-size: 16px;
+      font-size: 14px;
       color: #666;
-      margin-bottom: 40px;
+      margin-bottom: 30px;
     }
 
     /* ===== 最初のスクリーン（見方選択） ===== */
@@ -58,15 +64,15 @@
     .mode-buttons {
       display: flex;
       flex-direction: column;
-      gap: 15px;
-      margin-bottom: 20px;
+      gap: 12px;
+      margin-bottom: 15px;
     }
 
     .mode-btn {
-      padding: 20px;
+      padding: 15px;
       border: none;
       border-radius: 12px;
-      font-size: 18px;
+      font-size: 16px;
       font-weight: bold;
       cursor: pointer;
       transition: all 0.3s ease;
@@ -75,7 +81,8 @@
       align-items: center;
       justify-content: center;
       gap: 10px;
-      min-height: 70px;
+      min-height: 60px;
+      width: 100%;
     }
 
     .mode-btn:active {
@@ -101,27 +108,33 @@
     }
 
     .btn-icon {
-      font-size: 28px;
+      font-size: 24px;
+      flex-shrink: 0;
     }
 
     /* ===== モデル選択スクリーン ===== */
     .model-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 15px;
+      gap: 10px;
       margin-bottom: 20px;
     }
 
     .model-btn {
-      padding: 20px;
+      padding: 15px 10px;
       border: 2px solid #eee;
-      border-radius: 12px;
+      border-radius: 10px;
       background: white;
       cursor: pointer;
       transition: all 0.3s ease;
-      font-size: 16px;
+      font-size: 14px;
       font-weight: bold;
       color: #333;
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
     }
 
     .model-btn:hover {
@@ -145,7 +158,7 @@
       font-weight: bold;
       color: #666;
       transition: all 0.3s ease;
-      margin-top: 10px;
+      width: 100%;
     }
 
     .back-btn:hover {
@@ -161,6 +174,7 @@
       top: 0;
       left: 0;
       z-index: 1000;
+      overflow: hidden;
     }
 
     #ar-view model-viewer {
@@ -170,21 +184,21 @@
 
     .ar-controls {
       position: absolute;
-      top: 20px;
-      left: 20px;
+      top: 15px;
+      left: 15px;
       background: rgba(0, 0, 0, 0.7);
       color: white;
-      padding: 15px 20px;
-      border-radius: 10px;
+      padding: 10px 15px;
+      border-radius: 8px;
       z-index: 10;
-      font-size: 14px;
+      font-size: 12px;
     }
 
     .ar-back-btn {
       position: absolute;
-      top: 20px;
-      right: 20px;
-      padding: 12px 20px;
+      top: 15px;
+      right: 15px;
+      padding: 10px 15px;
       background: rgba(0, 0, 0, 0.7);
       color: white;
       border: none;
@@ -192,6 +206,7 @@
       cursor: pointer;
       z-index: 10;
       font-weight: bold;
+      font-size: 14px;
     }
 
     .ar-back-btn:hover {
@@ -205,7 +220,7 @@
       transform: translate(-50%, -50%);
       background: rgba(0, 0, 0, 0.9);
       color: white;
-      padding: 30px 50px;
+      padding: 30px 40px;
       border-radius: 15px;
       text-align: center;
       z-index: 100;
@@ -234,22 +249,22 @@
       transform: translate(-50%, -50%);
       background: rgba(255, 50, 50, 0.95);
       color: white;
-      padding: 30px 50px;
+      padding: 30px 40px;
       border-radius: 15px;
       text-align: center;
       z-index: 100;
       display: none;
-      max-width: 90vw;
+      max-width: 85vw;
     }
 
     .error-message h2 {
       margin-bottom: 15px;
-      font-size: 24px;
+      font-size: 20px;
     }
 
     .error-message p {
       margin: 10px 0;
-      font-size: 14px;
+      font-size: 13px;
     }
 
     .error-ok-btn {
@@ -263,18 +278,10 @@
       font-weight: bold;
     }
 
-    @media (max-width: 600px) {
-      .container {
-        padding: 30px 20px;
-      }
-
-      h1 {
-        font-size: 28px;
-      }
-
-      .model-grid {
-        grid-template-columns: 1fr;
-      }
+    .info-text {
+      font-size: 12px;
+      color: #999;
+      margin-top: 10px;
     }
   </style>
 </head>
@@ -296,7 +303,7 @@
       </button>
     </div>
 
-    <p style="font-size: 12px; color: #999;">実世界にARを重ねるか、モデル単体を見るか選べます</p>
+    <p class="info-text">実世界にARを重ねるか、モデル単体を見るか選べます</p>
   </div>
 
   <!-- ===== スクリーン2：モデル選択 ===== -->
@@ -316,7 +323,7 @@
     <div class="ar-controls">
       モデル: <span id="ar-model-name">---</span>
     </div>
-    <button class="ar-back-btn" onclick="backToModeSelect()">← 戻る</button>
+    <button class="ar-back-btn" onclick="backToModeSelect()">✕ 戻る</button>
 
     <model-viewer
       id="dynamic-viewer"
@@ -328,7 +335,7 @@
       auto-rotate
       shadow-intensity="1"
       exposure="1"
-      style="width: 100%; height: 100%;">
+      style="width: 100%; height: 100%; display: block;">
     </model-viewer>
   </div>
 
@@ -345,10 +352,12 @@
     <button class="error-ok-btn" onclick="closeError()">OK</button>
   </div>
 
-  <script>
+  <script type="module">
+    import 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
+
     // ===== グローバル設定 =====
-    const state = {
-      currentMode: null, // 'ar' or 'viewer'
+    window.state = {
+      currentMode: null,
       selectedModel: null,
       models: [
         { name: 'untitled', label: '3Dモデル 1️⃣' },
@@ -373,20 +382,20 @@
     const viewer = document.getElementById('dynamic-viewer');
 
     // ===== ユーティリティ関数 =====
-    function showLoading(show = true, text = '読み込み中...') {
+    window.showLoading = function(show = true, text = '読み込み中...') {
       loadingEl.style.display = show ? 'block' : 'none';
       loadingText.textContent = text;
-    }
+    };
 
-    function showError(title, message) {
+    window.showError = function(title, message) {
       errorTitle.textContent = title;
       errorText.textContent = message;
       errorEl.style.display = 'block';
-    }
+    };
 
-    function closeError() {
+    window.closeError = function() {
       errorEl.style.display = 'none';
-    }
+    };
 
     function switchScreen(screenName) {
       modeScreen.style.display = 'none';
@@ -403,24 +412,24 @@
     }
 
     // ===== 見方選択画面から移動 =====
-    function goToARMode() {
-      state.currentMode = 'ar';
+    window.goToARMode = function() {
+      window.state.currentMode = 'ar';
       screenModeLabel.textContent = 'ARで見るモデルを選んでください';
       renderModelGrid();
       switchScreen('model');
-    }
+    };
 
-    function goToModelSelect() {
-      state.currentMode = 'viewer';
+    window.goToModelSelect = function() {
+      window.state.currentMode = 'viewer';
       screenModeLabel.textContent = '3Dビューアーで見るモデルを選んでください';
       renderModelGrid();
       switchScreen('model');
-    }
+    };
 
     // ===== モデルグリッド生成 =====
     function renderModelGrid() {
       modelGrid.innerHTML = '';
-      state.models.forEach(model => {
+      window.state.models.forEach(model => {
         const btn = document.createElement('button');
         btn.className = 'model-btn';
         btn.textContent = model.label;
@@ -431,18 +440,18 @@
 
     // ===== モデル選択 =====
     function selectModel(modelName) {
-      state.selectedModel = modelName;
+      window.state.selectedModel = modelName;
 
-      if (state.currentMode === 'ar') {
+      if (window.state.currentMode === 'ar') {
         loadARView(modelName);
-      } else if (state.currentMode === 'viewer') {
+      } else if (window.state.currentMode === 'viewer') {
         loadViewerMode(modelName);
       }
     }
 
     // ===== AR ビューアー読み込み =====
     function loadARView(modelName) {
-      showLoading(true, 'ARを起動中...');
+      window.showLoading(true, 'ARを起動中...');
       arModelName.textContent = modelName;
 
       const modelPath = `assets/models/${modelName}.glb`;
@@ -450,21 +459,20 @@
 
       switchScreen('ar');
 
-      // モデル読み込み監視
       const onLoad = () => {
         console.log(`✅ モデル「${modelName}」が読み込まれました`);
-        showLoading(false);
+        window.showLoading(false);
         viewer.removeEventListener('load', onLoad);
         viewer.removeEventListener('error', onError);
       };
 
       const onError = (event) => {
         console.error('❌ モデル読み込みエラー:', event);
-        showLoading(false);
+        window.showLoading(false);
         switchScreen('model');
-        showError(
+        window.showError(
           '❌ モデルが見つかりません',
-          `assets/models/${modelName}.glb が存在しません。\nファイル名やパスを確認してください。`
+          `assets/models/${modelName}.glb が存在しません。`
         );
         viewer.removeEventListener('load', onLoad);
         viewer.removeEventListener('error', onError);
@@ -476,7 +484,7 @@
 
     // ===== 3D ビューアーモード =====
     function loadViewerMode(modelName) {
-      showLoading(true, 'モデルを読み込み中...');
+      window.showLoading(true, 'モデルを読み込み中...');
       arModelName.textContent = modelName;
 
       const modelPath = `assets/models/${modelName}.glb`;
@@ -485,19 +493,19 @@
       switchScreen('ar');
 
       const onLoad = () => {
-        console.log(`✅ モデル「${modelName}」��読み込まれました`);
-        showLoading(false);
+        console.log(`✅ モデル「${modelName}」が読み込まれました`);
+        window.showLoading(false);
         viewer.removeEventListener('load', onLoad);
         viewer.removeEventListener('error', onError);
       };
 
       const onError = (event) => {
         console.error('❌ モデル読み込みエラー:', event);
-        showLoading(false);
+        window.showLoading(false);
         switchScreen('model');
-        showError(
+        window.showError(
           '❌ モデルが見つかりません',
-          `assets/models/${modelName}.glb が存在しません。\nファイル名やパスを確認してください。`
+          `assets/models/${modelName}.glb が存在しません。`
         );
         viewer.removeEventListener('load', onLoad);
         viewer.removeEventListener('error', onError);
@@ -508,19 +516,17 @@
     }
 
     // ===== 戻るボタン =====
-    function goBack() {
+    window.goBack = function() {
       switchScreen('mode');
-    }
+    };
 
-    function backToModeSelect() {
+    window.backToModeSelect = function() {
       switchScreen('mode');
-    }
+    };
 
     // ===== 初期化 =====
-    document.addEventListener('DOMContentLoaded', () => {
-      switchScreen('mode');
-      console.log('✅ WebAR プロジェクトが初期化されました');
-    });
+    console.log('✅ WebAR プロジェクトが初期化されました');
+    switchScreen('mode');
   </script>
 
 </body>
