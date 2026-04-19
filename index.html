@@ -182,7 +182,7 @@
       height: 100%;
     }
 
-    /* ===== AR画面のUI（すりガラス効果 / Glassmorphism） ===== */
+    /* ===== AR画面のUI ===== */
     .ar-controls, .ar-back-btn {
       position: absolute;
       background: rgba(255, 255, 255, 0.15);
@@ -219,12 +219,7 @@
       background: rgba(255, 255, 255, 0.3);
     }
 
-    /* ===== ★ 新設：明示的ARボタン（画面下部に固定） ===== */
-    /*
-     * 自動起動ではなく、ユーザーが自分でタップして起動する大きなボタン。
-     * ブラウザのセキュリティ制約（ユーザー操作起点でないとカメラ許可しない）を
-     * 確実に回避するための設計。ARモード時のみ表示する。
-     */
+    /* ===== 明示的ARボタン ===== */
     #ar-launch-btn {
       position: absolute;
       bottom: 40px;
@@ -323,10 +318,11 @@
       background: #F2F2F7;
     }
   </style>
+
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 </head>
 <body>
 
-  <!-- ===== スクリーン1：見方選択 ===== -->
   <div id="mode-screen" class="container">
     <h1>ようこそ！✨</h1>
     <p class="subtitle">WebAR体験へ</p>
@@ -345,32 +341,22 @@
     <p class="info-text">実世界にARを重ねるか、モデル単体を見るか選べます</p>
   </div>
 
-  <!-- ===== スクリーン2：モデル選択 ===== -->
   <div id="model-screen" class="container">
     <h1>モデルを選ぶ</h1>
     <p class="subtitle" id="screen-mode-label">見方を選んでください</p>
 
     <div class="model-grid" id="model-grid">
-      <!-- JavaScriptで動的に生成 -->
-    </div>
+      </div>
 
     <button class="back-btn" onclick="goBack()">← 戻る</button>
   </div>
 
-  <!-- ===== スクリーン3：AR ビューアー ===== -->
   <div id="ar-view">
     <div class="ar-controls">
       モデル: <span id="ar-model-name">---</span>
     </div>
     <button class="ar-back-btn" onclick="backToModeSelect()">✕ 戻る</button>
 
-    <!--
-      ios-src について：
-      iOSのSafariでQuick Look（ARKit）を確実に動かしたい場合は
-      ios-src="assets/models/モデル名.usdz" を追加する。
-      現状はGLBのみで動くが、iOS実機で不安定な場合はusdzを用意して
-      下記のJavaScript（loadARView内）で動的に設定する仕組み実装済み。
-    -->
     <model-viewer
       id="dynamic-viewer"
       src=""
@@ -384,19 +370,16 @@
       style="width: 100%; height: 100%; display: block;">
     </model-viewer>
 
-    <!-- ★ 新設：明示的ARカメラ起動ボタン（ARモード時のみ表示） -->
     <button id="ar-launch-btn" onclick="triggerAR()">
       📷 ARカメラを起動する
     </button>
   </div>
 
-  <!-- ローディング表示 -->
   <div id="loading" class="loading">
     <div class="spinner"></div>
     <p id="loading-text">読み込み中...</p>
   </div>
 
-  <!-- エラー表示 -->
   <div id="error-message" class="error-message">
     <h2 id="error-title">エラー</h2>
     <p id="error-text"></p>
@@ -404,8 +387,6 @@
   </div>
 
   <script type="module">
-    import 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
-
     // ===== グローバル設定 =====
     window.state = {
       currentMode: null,
@@ -436,7 +417,7 @@
     // ===== ユーティリティ =====
     window.showLoading = function(show = true, text = '読み込み中...') {
       loadingEl.style.display = show ? 'block' : 'none';
-      loadingText.textContent = text;
+      if (text) loadingText.textContent = text;
     };
 
     window.showError = function(title, message) {
@@ -453,7 +434,7 @@
       modeScreen.style.display  = 'none';
       modelScreen.style.display = 'none';
       arView.style.display      = 'none';
-      arLaunchBtn.style.display = 'none'; // 画面切替時は必ず非表示に
+      arLaunchBtn.style.display = 'none';
 
       if (screenName === 'mode') {
         modeScreen.style.display = 'block';
@@ -464,26 +445,13 @@
       }
     }
 
-    // ===== ★ ディープリンク処理 =====
-    /*
-     * URLパラメータ ?model=flower&mode=ar のように付いていれば
-     * モード選択・モデル選択の画面を全スキップして直接ARビューアーへ。
-     * QRコード運用（マルシェ等）を想定した機能。
-     *
-     * 使用例：
-     *   https://yoursite.com/?model=flower&mode=ar      → ARカメラで起動
-     *   https://yoursite.com/?model=flower&mode=viewer  → 3Dビューアーで起動
-     *   https://yoursite.com/?model=flower              → modeなし → ARがデフォルト
-     *   https://yoursite.com/                           → 通常のトップ画面
-     */
     function handleDeepLink() {
       const params    = new URLSearchParams(window.location.search);
       const modelName = params.get('model');
-      const mode      = params.get('mode') || 'ar'; // 省略時はARをデフォルトに
+      const mode      = params.get('mode') || 'ar';
 
-      if (!modelName) return false; // パラメータなし → 通常トップ
+      if (!modelName) return false;
 
-      // モデルが登録済みか確認
       const found = window.state.models.find(m => m.name === modelName);
       if (!found) {
         switchScreen('mode');
@@ -494,7 +462,6 @@
         return true;
       }
 
-      // 状態を設定してビューアーを直接起動
       window.state.currentMode   = mode;
       window.state.selectedModel = modelName;
 
@@ -545,13 +512,6 @@
     }
 
     // ===== AR ビューアー読み込み =====
-    /*
-     * ★ 自動起動をやめた理由：
-     * activateAR() を load イベント内から直接呼ぶと、ブラウザによっては
-     * 「ユーザー操作起点でない」と判断しカメラ許可が下りない場合がある。
-     * → モデルのロード完了後に大きな「ARを起動する」ボタンを表示し、
-     *   ユーザー自身にタップさせる設計に変更。これが最も安定した方法。
-     */
     function loadARView(modelName) {
       window.showLoading(true, 'ARを準備中...');
       arModelName.textContent = modelName;
@@ -559,12 +519,8 @@
       const glbPath  = `assets/models/${modelName}.glb`;
       const usdzPath = `assets/models/${modelName}.usdz`;
 
-      viewer.src = '';         // 古いモデルをリセット
-      viewer.src = glbPath;
-      // ★ ios-src：iOSのQuick Lookを確実に出すためのusdz指定
-      // usdzファイルがなくてもmodel-viewerがglbへ自動フォールバックするので安全
+      viewer.src = '';         // リセット
       viewer.setAttribute('ios-src', usdzPath);
-
       switchScreen('ar');
 
       const onLoad = () => {
@@ -574,11 +530,11 @@
         viewer.removeEventListener('error', onError);
 
         if (viewer.canActivateAR) {
-          arLaunchBtn.style.display = 'block'; // ★ ボタンを表示（自動起動しない）
+          arLaunchBtn.style.display = 'block';
         } else {
           window.showError(
             '📵 AR非対応',
-            'このデバイスまたはブラウザはWebARに対応していません。\n3Dビューアーとして引き続きご覧いただけます。\n\n対応環境：Android Chrome / iOS Safari'
+            'このデバイスまたはブラウザはWebARに対応していません。\n3Dビューアーとして引き続きご覧いただけます。'
           );
         }
       };
@@ -594,15 +550,12 @@
         viewer.removeEventListener('error', onError);
       };
 
+      // 修正2: リスナーを「先に」登録してから src をセットする（タイミング競合防止）
       viewer.addEventListener('load', onLoad);
       viewer.addEventListener('error', onError);
+      viewer.src = glbPath; 
     }
 
-    // ===== ★ ARカメラ起動ボタンのハンドラ =====
-    /*
-     * ユーザーがタップした瞬間に activateAR() を呼ぶ。
-     * タップ = ユーザー操作起点 なのでブラウザのカメラ許可が確実に通る。
-     */
     window.triggerAR = function() {
       arLaunchBtn.style.display = 'none';
       if (viewer.canActivateAR) {
@@ -615,10 +568,10 @@
       window.showLoading(true, 'モデルを読み込み中...');
       arModelName.textContent = modelName;
 
-      viewer.src = '';
-      viewer.src = `assets/models/${modelName}.glb`;
-      viewer.removeAttribute('ios-src'); // ビューアーモードではios-src不要
+      const glbPath = `assets/models/${modelName}.glb`;
 
+      viewer.src = '';
+      viewer.removeAttribute('ios-src');
       switchScreen('ar');
 
       const onLoad = () => {
@@ -626,7 +579,6 @@
         window.showLoading(false);
         viewer.removeEventListener('load', onLoad);
         viewer.removeEventListener('error', onError);
-        // ビューアーモードではARボタンは表示しない
       };
 
       const onError = () => {
@@ -640,8 +592,10 @@
         viewer.removeEventListener('error', onError);
       };
 
+      // 修正2: リスナーを先に登録
       viewer.addEventListener('load', onLoad);
       viewer.addEventListener('error', onError);
+      viewer.src = glbPath;
     }
 
     // ===== 戻るボタン =====
@@ -654,7 +608,7 @@
       switchScreen('mode');
     };
 
-    // ===== 初期化：ディープリンクを確認、なければ通常トップ =====
+    // ===== 初期化 =====
     console.log('✅ WebAR プロジェクトが初期化されました');
     const didDeepLink = handleDeepLink();
     if (!didDeepLink) {
@@ -662,6 +616,5 @@
     }
 
   </script>
-
 </body>
 </html>
