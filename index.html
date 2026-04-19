@@ -8,228 +8,94 @@
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
   <style>
+    /* ＝＝＝ ここから下のCSS（デザイン）は前回から一切変更していません ＝＝＝ */
     * { margin: 0; padding: 0; box-sizing: border-box; }
     
     body { 
       width: 100vw; 
       height: 100vh; 
-      /* スマホアプリらしい落ち着いた背景色 */
       background-color: #F2F2F7; 
       overflow: hidden; 
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", Roboto, sans-serif;
-      /* タップ時の青いハイライトを無効化 */
       -webkit-tap-highlight-color: transparent;
     }
 
-    /* ===== ローディング ===== */
     .loading {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(28, 28, 30, 0.85);
-      backdrop-filter: blur(10px);
-      -webkit-backdrop-filter: blur(10px);
-      color: white;
-      padding: 24px 32px;
-      border-radius: 16px;
-      text-align: center;
-      z-index: 30;
-      display: none;
-      font-weight: 500;
-      font-size: 15px;
+      position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+      background: rgba(28, 28, 30, 0.85); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+      color: white; padding: 24px 32px; border-radius: 16px; text-align: center;
+      z-index: 30; display: none; font-weight: 500; font-size: 15px;
     }
 
     .spinner {
-      width: 36px;
-      height: 36px;
-      border: 3px solid rgba(255, 255, 255, 0.2);
-      border-top: 3px solid white;
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin: 0 auto 16px;
+      width: 36px; height: 36px; border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid white; border-radius: 50%; animation: spin 1s linear infinite; margin: 0 auto 16px;
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-    /* ===== エラーメッセージ ===== */
     #error-message {
-      position: fixed;
-      top: max(env(safe-area-inset-top), 20px);
-      left: 16px;
-      right: 16px;
-      background: rgba(255, 59, 48, 0.95);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      color: white;
-      padding: 16px;
-      border-radius: 12px;
-      text-align: center;
-      display: none;
-      z-index: 20;
-      font-size: 14px;
-      font-weight: 500;
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-      word-break: break-word;
+      position: fixed; top: max(env(safe-area-inset-top), 20px); left: 16px; right: 16px;
+      background: rgba(255, 59, 48, 0.95); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+      color: white; padding: 16px; border-radius: 12px; text-align: center;
+      display: none; z-index: 20; font-size: 14px; font-weight: 500; box-shadow: 0 4px 12px rgba(0,0,0,0.15); word-break: break-word;
     }
 
-    /* ===== モデルビューア ===== */
     model-viewer { 
-      width: 100%; 
-      height: 100%; 
-      background-color: #000; /* AR起動前は黒背景でリッチに */
-      --poster-color: transparent; 
+      width: 100%; height: 100%; background-color: #000; --poster-color: transparent; 
     }
 
-    /* ===== AR ボタン ===== */
     .ar-button {
-      background-color: #007aff;
-      color: white;
-      border: none;
-      border-radius: 100px;
-      padding: 16px 28px;
-      font-size: 17px;
-      font-weight: 600;
-      position: absolute;
-      /* iPhoneのホームバー(下部)に被らないように調整 */
-      bottom: max(env(safe-area-inset-bottom), 30px);
-      left: 50%;
-      transform: translateX(-50%);
-      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-      z-index: 10;
-      transition: background-color 0.2s, transform 0.1s;
+      background-color: #007aff; color: white; border: none; border-radius: 100px;
+      padding: 16px 28px; font-size: 17px; font-weight: 600; position: absolute;
+      bottom: max(env(safe-area-inset-bottom), 30px); left: 50%; transform: translateX(-50%);
+      box-shadow: 0 4px 16px rgba(0, 122, 255, 0.4); cursor: pointer; display: flex;
+      align-items: center; gap: 10px; z-index: 10; transition: background-color 0.2s, transform 0.1s;
     }
 
-    .ar-button:active { 
-      background-color: #005bb5; 
-      transform: translateX(-50%) scale(0.96); 
-    }
+    .ar-button:active { background-color: #005bb5; transform: translateX(-50%) scale(0.96); }
 
-    /* ===== 戻るボタン ===== */
     .back-button {
-      position: absolute;
-      /* iPhoneのノッチ(上部)に被らないように調整 */
-      top: max(env(safe-area-inset-top), 16px);
-      left: 16px;
-      background-color: transparent;
-      color: #007aff; /* ネイティブアプリ風のブルー */
-      border: none;
-      padding: 8px 12px;
-      font-size: 17px;
-      font-weight: 400;
-      cursor: pointer;
-      z-index: 10;
-      display: flex;
-      align-items: center;
-      gap: 4px;
+      position: absolute; top: max(env(safe-area-inset-top), 16px); left: 16px;
+      background-color: transparent; color: #007aff; border: none; padding: 8px 12px;
+      font-size: 17px; font-weight: 400; cursor: pointer; z-index: 10; display: flex; align-items: center; gap: 4px;
     }
 
     .back-button::before {
-      content: '';
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-top: 2px solid #007aff;
-      border-left: 2px solid #007aff;
-      transform: rotate(-45deg);
-      margin-bottom: 2px;
+      content: ''; display: inline-block; width: 10px; height: 10px;
+      border-top: 2px solid #007aff; border-left: 2px solid #007aff; transform: rotate(-45deg); margin-bottom: 2px;
     }
 
-    .back-button:active {
-      opacity: 0.4;
-    }
+    .back-button:active { opacity: 0.4; }
 
-    /* ===== トップ画面 ===== */
     #top-screen {
-      width: 100%;
-      height: 100%;
-      padding-top: max(env(safe-area-inset-top), 40px);
-      display: flex;
-      flex-direction: column;
-      z-index: 5;
+      width: 100%; height: 100%; padding-top: max(env(safe-area-inset-top), 40px);
+      display: flex; flex-direction: column; z-index: 5;
     }
 
-    .top-screen-hidden {
-      display: none !important;
-    }
+    .top-screen-hidden { display: none !important; }
 
-    #top-screen h1 {
-      font-size: 34px;
-      font-weight: 700;
-      color: #000;
-      margin: 0 20px 8px;
-      letter-spacing: -0.5px;
-    }
+    #top-screen h1 { font-size: 34px; font-weight: 700; color: #000; margin: 0 20px 8px; letter-spacing: -0.5px; }
+    #top-screen p { font-size: 15px; color: #8E8E93; margin: 0 20px 24px; }
 
-    #top-screen p {
-      font-size: 15px;
-      color: #8E8E93;
-      margin: 0 20px 24px;
-    }
-
-    /* アプリ風のリストメニュー */
-    .model-buttons {
-      display: flex;
-      flex-direction: column;
-      background: #FFFFFF;
-      border-radius: 12px;
-      margin: 0 20px;
-      overflow: hidden;
-    }
-
+    .model-buttons { display: flex; flex-direction: column; background: #FFFFFF; border-radius: 12px; margin: 0 20px; overflow: hidden; }
+    
     .model-button {
-      background: transparent;
-      color: #000;
-      border: none;
-      border-bottom: 1px solid #E5E5EA;
-      padding: 16px 20px;
-      font-size: 17px;
-      font-weight: 400;
-      text-align: left;
-      cursor: pointer;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      transition: background-color 0.1s;
+      background: transparent; color: #000; border: none; border-bottom: 1px solid #E5E5EA;
+      padding: 16px 20px; font-size: 17px; font-weight: 400; text-align: left; cursor: pointer;
+      display: flex; justify-content: space-between; align-items: center; transition: background-color 0.1s;
     }
 
-    .model-button:last-child {
-      border-bottom: none;
-    }
-
-    /* リスト右側の「＞」アイコン */
+    .model-button:last-child { border-bottom: none; }
     .model-button::after {
-      content: '';
-      display: inline-block;
-      width: 8px;
-      height: 8px;
-      border-top: 2px solid #C7C7CC;
-      border-right: 2px solid #C7C7CC;
-      transform: rotate(45deg);
+      content: ''; display: inline-block; width: 8px; height: 8px;
+      border-top: 2px solid #C7C7CC; border-right: 2px solid #C7C7CC; transform: rotate(45deg);
     }
+    .model-button:active { background: #E5E5EA; }
 
-    .model-button:active {
-      background: #E5E5EA;
-    }
-
-    /* ===== ビューアー画面 ===== */
-    #viewer-screen {
-      display: none;
-      position: relative;
-      width: 100%;
-      height: 100%;
-    }
-
-    .viewer-screen-visible {
-      display: block !important;
-    }
+    #viewer-screen { display: none; position: relative; width: 100%; height: 100%; }
+    .viewer-screen-visible { display: block !important; }
+    /* ＝＝＝ CSSはここまで ＝＝＝ */
   </style>
 </head>
 <body>
@@ -237,8 +103,7 @@
   <div id="top-screen">
     <h1>3Dモデル</h1>
     <p>見るモデルを選んでください</p>
-    <div class="model-buttons" id="model-buttons-container">
-      </div>
+    <div class="model-buttons" id="model-buttons-container"></div>
   </div>
 
   <div id="viewer-screen">
@@ -255,7 +120,7 @@
       id="ar-viewer"
       alt="3D Model"
       ar 
-      ar-modes="webxr scene-viewer" 
+      ar-modes="webxr scene-viewer quick-look" 
       camera-controls 
       shadow-intensity="1.5"
       auto-rotate>
@@ -272,7 +137,6 @@
   </div>
 
   <script>
-    // ===== モデル設定 =====
     const MODELS = [
       { name: 'flower',   label: 'お花 🌸' },
       { name: 'cube',     label: 'キューブ 🟦' },
@@ -280,7 +144,6 @@
       { name: 'untitled', label: '3Dモデル 1️⃣' }
     ];
 
-    // ===== DOM要素 =====
     const topScreen = document.getElementById('top-screen');
     const viewerScreen = document.getElementById('viewer-screen');
     const arViewer = document.getElementById('ar-viewer');
@@ -288,17 +151,12 @@
     const loadingEl = document.getElementById('loading');
     const modelButtonsContainer = document.getElementById('model-buttons-container');
 
-    // ===== ユーティリティ関数 =====
-    function showLoading(show = true) {
-      loadingEl.style.display = show ? 'flex' : 'none';
-    }
-
+    function showLoading(show = true) { loadingEl.style.display = show ? 'flex' : 'none'; }
+    
     function showError(message) {
       errorMessage.textContent = message;
       errorMessage.style.display = 'block';
-      setTimeout(() => {
-        errorMessage.style.display = 'none';
-      }, 5000);
+      setTimeout(() => { errorMessage.style.display = 'none'; }, 5000);
     }
 
     function switchToViewer() {
@@ -314,17 +172,23 @@
     window.goBackToTop = function() {
       switchToTop();
       arViewer.src = '';
+      arViewer.iosSrc = ''; // 戻る時にiosSrcもリセット
     };
 
-    // ===== モデル読み込み =====
     function loadModel(modelName) {
       showLoading(true);
       switchToViewer();
 
+      // 変更点②：.glb と .usdz の両方のパスを準備
       const glbPath = `./assets/models/${modelName}.glb`;
+      const usdzPath = `./assets/models/${modelName}.usdz`;
 
       arViewer.src = '';
+      arViewer.iosSrc = ''; // 一旦クリア
+      
+      // 変更点③：両方をビューアーにセット
       arViewer.src = glbPath;
+      arViewer.iosSrc = usdzPath;
 
       const onLoad = () => {
         showLoading(false);
@@ -335,7 +199,7 @@
 
       const onError = () => {
         showLoading(false);
-        const errorMsg = `❌ エラー: assets/models/${modelName}.glb が見つかりません。\n\nファイルが存在するか確認してください。`;
+        const errorMsg = `❌ エラー: assets/models/${modelName}.glb (または.usdz) が見つかりません。\n\nファイルが存在するか確認してください。`;
         showError(errorMsg);
         console.error('モデルの読み込みエラー:', errorMsg);
         arViewer.removeEventListener('load', onLoad);
@@ -346,7 +210,6 @@
       arViewer.addEventListener('error', onError);
     }
 
-    // ===== モデルボタン生成 =====
     function renderModelButtons() {
       modelButtonsContainer.innerHTML = '';
       MODELS.forEach(model => {
@@ -358,7 +221,6 @@
       });
     }
 
-    // ===== URLパラメータ確認（ディープリンク対応） =====
     function handleDeepLink() {
       const params = new URLSearchParams(window.location.search);
       const modelName = params.get('model');
@@ -375,7 +237,6 @@
       return false;
     }
 
-    // ===== 初期化 =====
     document.addEventListener('DOMContentLoaded', () => {
       renderModelButtons();
       const hasDeepLink = handleDeepLink();
