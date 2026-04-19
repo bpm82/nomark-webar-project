@@ -177,12 +177,12 @@
     }
 
     /* ===== スクリーン3：ビューアー（フルスクリーン） ===== */
-    #viewer-screen {
+ #viewer-screen {
       position: fixed;
       top: 0; left: 0;
       width: 100vw;
       height: 100vh;
-      background: #000;
+      background: #F2F2F7; /* ← 真っ黒から明るいグレーに変更！ */
       padding: 0;
       max-width: none;
       margin: 0;
@@ -199,11 +199,11 @@
     /* ===== ビューアー上のUI（すりガラス） ===== */
     .viewer-ui {
       position: absolute;
-      background: rgba(255,255,255,0.15);
+      background: rgba(255,255,255,0.7); /* ← すりガラスを白っぽく */
       backdrop-filter: blur(12px);
       -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255,255,255,0.2);
-      color: #fff;
+      border: 1px solid rgba(0,0,0,0.1); /* ← 枠線をうすい黒に */
+      color: #1C1C1E; /* ← 文字を黒にして読みやすく！ */
       z-index: 10;
     }
 
