@@ -2,37 +2,133 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>マーカーレスARビューワー</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>カメラARビューワー</title>
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
   <style>
-    body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f0f0f0; }
-    model-viewer { width: 100%; height: 100%; }
+    * { margin: 0; padding: 0; }
+    body { width: 100vw; height: 100vh; overflow: hidden; background: #000; }
+    model-viewer { 
+      width: 100%; 
+      height: 100%;
+      --poster-color: transparent;
+    }
     #ar-button {
-      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
-      padding: 12px 24px; border-radius: 8px; background-color: #000; color: #fff;
-      border: none; font-size: 16px; cursor: pointer; display: none;
+      position: absolute; 
+      bottom: 30px; 
+      left: 50%; 
+      transform: translateX(-50%);
+      padding: 15px 30px; 
+      border-radius: 50px; 
+      background-color: #FF6B6B; 
+      color: #fff;
+      border: none; 
+      font-size: 18px; 
+      cursor: pointer; 
+      font-weight: bold;
+      box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+      z-index: 10;
+    }
+    #ar-button:active {
+      transform: translateX(-50%) scale(0.95);
+    }
+    #info {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      color: white;
+      font-size: 14px;
+      background: rgba(0,0,0,0.6);
+      padding: 10px 15px;
+      border-radius: 8px;
+      display: none;
     }
   </style>
 </head>
 <body>
-  <model-viewer id="dynamic-viewer" src="" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate shadow-intensity="1">
-    <button slot="ar-button" id="ar-button">ARで見る 👀</button>
+  <model-viewer 
+    id="dynamic-viewer" 
+    src="" 
+    ar 
+    ar-modes="webxr scene-viewer quick-look" 
+    camera-controls 
+    touch-action="pan-y"
+    auto-rotate
+    shadow-intensity="1"
+    exposure="1"
+    camera-target="0m 0m 0m"
+    min-camera-orbit="auto 90deg auto"
+    max-camera-orbit="auto 90deg auto">
+    <button slot="ar-button" id="ar-button">📱 ARで見る</button>
   </model-viewer>
 
+  <div id="info">
+    モデル: <span id="model-name"></span>
+  </div>
+
   <script>
+    // ===== アプリ内ブラウザ検出 =====
+    const isInAppBrowser = /Line|Twitter|X11|Instagram|Facebook/i.test(navigator.userAgent);
+    if (isInAppBrowser) {
+      alert('⚠️ このアプリ内ブラウザではAR機能が制限されています。\n\nSafari（iOS）または Chrome（Android）で直接開いてください！');
+    }
+
+    // ===== 初期化 =====
     document.addEventListener("DOMContentLoaded", () => {
       const urlParams = new URLSearchParams(window.location.search);
       const modelName = urlParams.get('model'); 
       const viewer = document.getElementById('dynamic-viewer');
       const arButton = document.getElementById('ar-button');
+      const infoDiv = document.getElementById('info');
+      const modelNameSpan = document.getElementById('model-name');
 
       if (modelName) {
-        // assets/models/ の中のファイルを見に行く
-        viewer.src = `assets/models/${modelName}.glb`;
-        arButton.style.display = 'block';
+        // モデルパスを設定
+        const modelPath = `assets/models/${modelName}.glb`;
+        viewer.src = modelPath;
+        
+        // 情報表示
+        modelNameSpan.textContent = modelName;
+        infoDiv.style.display = 'block';
+        
+        // ===== モデル読み込み成功 =====
+        viewer.addEventListener('load', () => {
+          console.log('✅ モデル「' + modelName + '」が正常に読み込まれました');
+          arButton.style.display = 'block';
+        });
+        
+        // ===== モデル読み込み失敗 =====
+        viewer.addEventListener('error', (event) => {
+          console.error('❌ モデル読み込みエラー:', event);
+          arButton.textContent = '❌ モデルが見つかりません';
+          arButton.style.backgroundColor = '#888';
+          arButton.style.cursor = 'not-allowed';
+          arButton.disabled = true;
+          
+          const errorMsg = `<h2 style="color:white; text-align:center; margin-top:50vh; transform:translateY(-50%);">
+            ❌ モデルが見つかりません<br/><br/>
+            <span style="font-size:14px;">assets/models/${modelName}.glb<br/>を確認してください</span>
+          </h2>`;
+          document.body.innerHTML = errorMsg;
+        });
+
+        // ===== カメラ許可確認 =====
+        viewer.addEventListener('ar-status', (event) => {
+          if (!event.detail.canActivateAR) {
+            arButton.textContent = '⚠️ このデバイスはAR非対応';
+            arButton.disabled = true;
+            console.warn('このデバイスはAR非対応です');
+          }
+        });
+
       } else {
-        document.body.innerHTML = '<h2 style="text-align:center; margin-top:50px;">モデルが指定されていません😭</h2>';
+        // モデル指定がない場合
+        document.body.innerHTML = `
+          <h2 style="color:white; text-align:center; margin-top:50vh; transform:translateY(-50%);">
+            ❌ モデルが指定されていません<br/><br/>
+            <span style="font-size:14px;">例: ar.html?model=untitled</span>
+          </h2>
+        `;
       }
     });
   </script>
