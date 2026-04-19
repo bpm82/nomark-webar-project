@@ -4,165 +4,167 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WebAR プロジェクト</title>
-  <style>
+ <style>
+    /* ===== 共通リセットとスマホアプリ風ベース設定 ===== */
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent; /* タップ時の青い枠を消す */
     }
 
     html, body {
       width: 100%;
       height: 100%;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      /* スマホで見やすいシステムフォントを指定 */
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+      background-color: #F2F2F7; /* iOS風の明るいグレー背景 */
+      color: #1C1C1E;
     }
 
-    body {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      padding: 20px;
-      min-height: 100vh;
-    }
-
+    /* ===== アプリの画面（スクリーン） ===== */
     .container {
-      background: white;
-      border-radius: 20px;
-      padding: 30px 20px;
-      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      padding: 60px 24px 40px; /* 上下にゆったりとした余白 */
       max-width: 500px;
-      width: 100%;
-      text-align: center;
+      margin: 0 auto;
+      min-height: 100vh;
+      display: none; /* JSでblockに切り替わる */
+      animation: fadeIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
     }
 
-    h1 {
-      font-size: 28px;
-      color: #333;
-      margin-bottom: 5px;
-    }
-
-    .subtitle {
-      font-size: 14px;
-      color: #666;
-      margin-bottom: 30px;
-    }
-
-    /* ===== 最初のスクリーン（見方選択） ===== */
+    /* JSで表示される画面（初期画面） */
     #mode-screen {
       display: block;
     }
 
-    #model-screen {
-      display: none;
+    /* 画面切り替え時のフワッと表示されるアニメーション */
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
 
-    #ar-view {
-      display: none;
+    /* ===== テキスト・見出し ===== */
+    h1 {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+      text-align: left; /* アプリっぽく左寄せ */
     }
 
+    .subtitle {
+      font-size: 16px;
+      color: #8E8E93;
+      margin-bottom: 40px;
+      text-align: left;
+      font-weight: 500;
+    }
+
+    .info-text {
+      font-size: 13px;
+      color: #AEAEB2;
+      margin-top: 24px;
+      text-align: center;
+      font-weight: 500;
+    }
+
+    /* ===== モード選択ボタン（巨大カード型） ===== */
     .mode-buttons {
       display: flex;
       flex-direction: column;
-      gap: 12px;
-      margin-bottom: 15px;
+      gap: 16px;
     }
 
     .mode-btn {
-      padding: 15px;
+      padding: 24px 20px;
       border: none;
-      border-radius: 12px;
-      font-size: 16px;
+      border-radius: 24px; /* 大きめの丸み */
+      font-size: 18px;
       font-weight: bold;
       cursor: pointer;
-      transition: all 0.3s ease;
+      transition: transform 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
       color: white;
       display: flex;
       align-items: center;
-      justify-content: center;
-      gap: 10px;
-      min-height: 60px;
+      justify-content: flex-start; /* アイコン左、テキスト右 */
+      gap: 16px;
       width: 100%;
     }
 
     .mode-btn:active {
-      transform: scale(0.98);
+      transform: scale(0.96); /* 押した時の沈み込み */
     }
 
     .mode-btn-camera {
-      background: linear-gradient(135deg, #FF6B6B 0%, #FF8E72 100%);
-      box-shadow: 0 5px 20px rgba(255, 107, 107, 0.4);
-    }
-
-    .mode-btn-camera:hover {
-      box-shadow: 0 8px 25px rgba(255, 107, 107, 0.6);
+      background: linear-gradient(135deg, #FF3B30 0%, #FF2D55 100%);
+      box-shadow: 0 10px 20px rgba(255, 45, 85, 0.2);
     }
 
     .mode-btn-viewer {
-      background: linear-gradient(135deg, #4ECDC4 0%, #44A08D 100%);
-      box-shadow: 0 5px 20px rgba(78, 205, 196, 0.4);
-    }
-
-    .mode-btn-viewer:hover {
-      box-shadow: 0 8px 25px rgba(78, 205, 196, 0.6);
+      background: linear-gradient(135deg, #00C6FF 0%, #0072FF 100%);
+      box-shadow: 0 10px 20px rgba(0, 114, 255, 0.2);
     }
 
     .btn-icon {
-      font-size: 24px;
-      flex-shrink: 0;
-    }
-
-    /* ===== モデル選択スクリーン ===== */
-    .model-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 10px;
-      margin-bottom: 20px;
-    }
-
-    .model-btn {
-      padding: 15px 10px;
-      border: 2px solid #eee;
-      border-radius: 10px;
-      background: white;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      font-size: 14px;
-      font-weight: bold;
-      color: #333;
-      min-height: 60px;
+      font-size: 28px;
+      background: rgba(255, 255, 255, 0.25);
+      width: 50px;
+      height: 50px;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-wrap: wrap;
+      border-radius: 16px;
+      flex-shrink: 0;
     }
 
-    .model-btn:hover {
-      border-color: #667eea;
-      background: #f8f9ff;
-      transform: translateY(-5px);
-      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.2);
+    /* ===== モデル選択グリッド（アプリアイコン風） ===== */
+    .model-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+      margin-bottom: 30px;
+    }
+
+    .model-btn {
+      padding: 30px 10px;
+      border: none;
+      border-radius: 20px;
+      background: #FFFFFF;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1C1C1E;
+      display: flex;
+      flex-direction: column; /* 縦並びにして少しリッチに */
+      align-items: center;
+      justify-content: center;
     }
 
     .model-btn:active {
-      transform: scale(0.95);
+      transform: scale(0.94);
+      background: #F2F2F7;
     }
 
-    /* ===== 戻るボタン ===== */
+    /* ===== 戻るボタン（控えめでスマートに） ===== */
     .back-btn {
-      padding: 12px 24px;
-      background: #f0f0f0;
+      display: block;
+      padding: 16px 24px;
+      background: #E5E5EA;
       border: none;
-      border-radius: 8px;
+      border-radius: 16px;
       cursor: pointer;
-      font-weight: bold;
-      color: #666;
-      transition: all 0.3s ease;
+      font-weight: 600;
+      font-size: 16px;
+      color: #007AFF; /* iOSのリンクブルー */
+      transition: all 0.2s ease;
       width: 100%;
+      margin-top: auto;
     }
 
-    .back-btn:hover {
-      background: #e0e0e0;
+    .back-btn:active {
+      background: #D1D1D6;
     }
 
     /* ===== AR ビューアースクリーン ===== */
@@ -175,6 +177,7 @@
       left: 0;
       z-index: 1000;
       overflow: hidden;
+      display: none;
     }
 
     #ar-view model-viewer {
@@ -182,59 +185,74 @@
       height: 100%;
     }
 
-    .ar-controls {
+    /* ===== AR画面のUI（すりガラス効果 / Glassmorphism） ===== */
+    .ar-controls, .ar-back-btn {
       position: absolute;
-      top: 15px;
-      left: 15px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      padding: 10px 15px;
-      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px); /* すりガラス効果 */
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      color: #FFFFFF;
       z-index: 10;
-      font-size: 12px;
+    }
+
+    .ar-controls {
+      top: 20px;
+      left: 20px;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 500;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.3);
     }
 
     .ar-back-btn {
-      position: absolute;
-      top: 15px;
-      right: 15px;
-      padding: 10px 15px;
-      background: rgba(0, 0, 0, 0.7);
-      color: white;
-      border: none;
-      border-radius: 8px;
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      border-radius: 20px;
       cursor: pointer;
-      z-index: 10;
-      font-weight: bold;
+      font-weight: 600;
       font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: background 0.2s ease;
     }
 
-    .ar-back-btn:hover {
-      background: rgba(0, 0, 0, 0.9);
+    .ar-back-btn:active {
+      background: rgba(255, 255, 255, 0.3);
     }
 
-    .loading {
+    /* ===== ローディング ＆ エラー ===== */
+    .loading, .error-message {
       position: fixed;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(28, 28, 30, 0.85); /* ダークなすりガラス */
+      backdrop-filter: blur(10px);
+      -webkit-backdrop-filter: blur(10px);
       color: white;
       padding: 30px 40px;
-      border-radius: 15px;
+      border-radius: 24px;
       text-align: center;
       z-index: 100;
       display: none;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+    }
+
+    .error-message {
+      background: rgba(255, 59, 48, 0.9); /* エラー用の赤み */
+      max-width: 85vw;
     }
 
     .spinner {
-      width: 40px;
-      height: 40px;
-      border: 4px solid rgba(255, 255, 255, 0.3);
-      border-top: 4px solid white;
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255, 255, 255, 0.2);
+      border-top: 3px solid #FFFFFF;
       border-radius: 50%;
       animation: spin 1s linear infinite;
-      margin: 0 auto 15px;
+      margin: 0 auto 16px;
     }
 
     @keyframes spin {
@@ -242,46 +260,38 @@
       100% { transform: rotate(360deg); }
     }
 
-    .error-message {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: rgba(255, 50, 50, 0.95);
-      color: white;
-      padding: 30px 40px;
-      border-radius: 15px;
-      text-align: center;
-      z-index: 100;
-      display: none;
-      max-width: 85vw;
+    #loading-text {
+      font-weight: 500;
+      font-size: 15px;
     }
 
     .error-message h2 {
-      margin-bottom: 15px;
+      margin-bottom: 12px;
       font-size: 20px;
+      font-weight: 700;
     }
 
     .error-message p {
-      margin: 10px 0;
-      font-size: 13px;
+      margin: 8px 0;
+      font-size: 14px;
+      line-height: 1.4;
     }
 
     .error-ok-btn {
-      margin-top: 20px;
-      padding: 10px 30px;
-      background: white;
-      color: #ff3232;
+      margin-top: 24px;
+      padding: 12px 32px;
+      background: #FFFFFF;
+      color: #FF3B30;
       border: none;
-      border-radius: 8px;
+      border-radius: 16px;
       cursor: pointer;
-      font-weight: bold;
+      font-weight: 700;
+      font-size: 16px;
+      width: 100%;
     }
-
-    .info-text {
-      font-size: 12px;
-      color: #999;
-      margin-top: 10px;
+    
+    .error-ok-btn:active {
+      background: #F2F2F7;
     }
   </style>
 </head>
