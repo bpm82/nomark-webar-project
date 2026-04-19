@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>マーカーレスARビューワー</title>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
+  <style>
+    body { margin: 0; width: 100vw; height: 100vh; overflow: hidden; background-color: #f0f0f0; }
+    model-viewer { width: 100%; height: 100%; }
+    #ar-button {
+      position: absolute; bottom: 30px; left: 50%; transform: translateX(-50%);
+      padding: 12px 24px; border-radius: 8px; background-color: #000; color: #fff;
+      border: none; font-size: 16px; cursor: pointer; display: none;
+    }
+  </style>
+</head>
+<body>
+  <model-viewer id="dynamic-viewer" src="" ar ar-modes="webxr scene-viewer quick-look" camera-controls auto-rotate shadow-intensity="1">
+    <button slot="ar-button" id="ar-button">ARで見る 👀</button>
+  </model-viewer>
+
+  <script>
+    document.addEventListener("DOMContentLoaded", () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const modelName = urlParams.get('model'); 
+      const viewer = document.getElementById('dynamic-viewer');
+      const arButton = document.getElementById('ar-button');
+
+      if (modelName) {
+        // assets/models/ の中のファイルを見に行く
+        viewer.src = `assets/models/${modelName}.glb`;
+        arButton.style.display = 'block';
+      } else {
+        document.body.innerHTML = '<h2 style="text-align:center; margin-top:50px;">モデルが指定されていません😭</h2>';
+      }
+    });
+  </script>
+</body>
+</html>
