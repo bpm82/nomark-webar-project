@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WebAR プロジェクト</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Dela+Gothic+One&family=M+PLUS+Rounded+1c:wght@400;700;800&display=swap" rel="stylesheet">
   <style>
     /* ===== リセット ===== */
     * {
@@ -316,11 +319,246 @@
       display: none;
       box-shadow: 0 8px 24px rgba(255,59,48,0.3);
     }
+
+    /* ===== スプラッシュ画面 (ゲームスタート) ===== */
+    #splash-screen {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      max-width: none;
+      margin: 0;
+      min-height: unset;
+      padding: 80px 24px 56px;
+      background: linear-gradient(170deg, #64b5f6 0%, #1976d2 40%, #0d47a1 100%);
+      font-family: 'M PLUS Rounded 1c', sans-serif;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+      overflow: hidden;
+      z-index: 500;
+    }
+
+    /* 雲 */
+    .cloud {
+      position: absolute;
+      background: rgba(255,255,255,0.85);
+      border-radius: 50px;
+    }
+    .cloud::before, .cloud::after {
+      content: '';
+      position: absolute;
+      background: rgba(255,255,255,0.85);
+      border-radius: 50%;
+    }
+    .c-bg { filter: blur(2px); opacity: 0.5; z-index: 0; }
+    .c1 { width: 50px; height: 16px; top: 15%; left: 10%; animation: cloudDrift 35s linear infinite; }
+    .c1::before { width: 22px; height: 22px; top: -10px; left: 6px; }
+    .c1::after  { width: 18px; height: 18px; top: -8px; left: 24px; }
+    .c2 { width: 60px; height: 18px; top: 25%; right: 5%; animation: cloudDrift 40s linear infinite reverse; }
+    .c2::before { width: 26px; height: 26px; top: -12px; left: 10px; }
+    .c2::after  { width: 20px; height: 20px; top: -10px; left: 30px; }
+    .c-fg { filter: blur(0px); opacity: 0.9; z-index: 1; }
+    .c3 { width: 90px; height: 26px; top: 10%; left: 45%; animation: cloudDrift 15s linear infinite; }
+    .c3::before { width: 40px; height: 40px; top: -20px; left: 10px; }
+    .c3::after  { width: 32px; height: 32px; top: -15px; left: 45px; }
+    @keyframes cloudDrift {
+      0%   { transform: translateX(0); }
+      50%  { transform: translateX(20px); }
+      100% { transform: translateX(0); }
+    }
+
+    /* 花びらパーティクル */
+    .petal {
+      position: absolute;
+      background: #f8bbd0;
+      border-radius: 15px 0 15px 0;
+      opacity: 0.8;
+      z-index: 2;
+      animation: fall linear infinite;
+      box-shadow: 0 0 5px rgba(255,255,255,0.3);
+    }
+    @keyframes fall {
+      0%   { transform: translateY(-30px) rotate(0deg) scale(0.8); opacity: 0; }
+      10%  { opacity: 0.9; }
+      80%  { opacity: 0.9; }
+      100% { transform: translateY(100vh) rotate(360deg) scale(1.2); opacity: 0; }
+    }
+
+    /* タイトルエリア */
+    .title-area {
+      text-align: center;
+      z-index: 3;
+      animation: titleFloat 3.5s ease-in-out infinite;
+    }
+    @keyframes titleFloat {
+      0%,100% { transform: translateY(0); }
+      50%     { transform: translateY(-7px); }
+    }
+    .splash-subtitle {
+      font-size: 14px;
+      color: #e3f2fd;
+      letter-spacing: 2px;
+      font-weight: 800;
+      text-shadow: 0 0 4px #fff, 0 0 8px #90caf9, 0 0 15px #1565c0;
+    }
+    .main-title {
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 34px;
+      color: #fff;
+      line-height: 1.15;
+      margin: 8px 0;
+      text-shadow: 0 2px 16px rgba(0,0,80,0.6);
+    }
+
+    /* 指紋ボタンエリア */
+    .fp-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+      z-index: 3;
+    }
+    .fp-btn {
+      width: 90px;
+      height: 90px;
+      border-radius: 50%;
+      background: rgba(13,71,161,0.7);
+      border: 2px solid rgba(144,202,249,0.6);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      position: relative;
+      transition: transform 0.1s, box-shadow 0.2s, background 0.2s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .fp-btn:active { transform: scale(0.93); }
+    .fp-btn canvas {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      z-index: 2;
+    }
+    .progress-ring {
+      position: absolute;
+      top: -2px; left: -2px;
+      transform: rotate(-90deg);
+      pointer-events: none;
+      z-index: 3;
+      opacity: 0;
+      transition: opacity 0.2s;
+    }
+    .progress-ring__circle {
+      stroke-dasharray: 283;
+      stroke-dashoffset: 283;
+    }
+    .fp-btn.scanning .progress-ring { opacity: 1; }
+    .fp-btn.scanning .progress-ring__circle {
+      stroke-dashoffset: 0;
+      transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+    }
+    .tap-hint {
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 2px;
+      color: #bbdefb;
+      animation: blinkHint 1.8s ease-in-out infinite;
+    }
+    @keyframes blinkHint {
+      0%,100% { opacity: 0.4; }
+      50%     { opacity: 1; }
+    }
+    .game-start-label {
+      font-size: 10px;
+      color: #90caf9;
+      letter-spacing: 3px;
+      opacity: 0.6;
+    }
+
+    /* スタートフラッシュ */
+    .start-flash {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 12px;
+      background: rgba(13,71,161,0.95);
+      opacity: 0;
+      pointer-events: none;
+      z-index: 20;
+      transition: opacity 0.2s;
+    }
+    .start-flash.show { opacity: 1; }
+    .start-icon {
+      font-size: 56px;
+      animation: startPop 0.3s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    .start-text {
+      font-family: 'Dela Gothic One', sans-serif;
+      font-size: 32px;
+      color: #fff;
+      letter-spacing: 4px;
+      text-shadow: 0 0 10px rgba(255,255,255,0.5);
+      animation: startPop 0.3s 0.05s cubic-bezier(0.34,1.56,0.64,1) both;
+    }
+    @keyframes startPop {
+      from { transform: scale(0.5); opacity: 0; }
+      to   { transform: scale(1);   opacity: 1; }
+    }
+
+    /* 波紋 */
+    .ripple-ring {
+      position: absolute;
+      border-radius: 50%;
+      border: 2px solid rgba(144,202,249,0.9);
+      top: 50%; left: 50%;
+      transform: translate(-50%,-50%);
+      animation: rippleOut 0.6s ease-out forwards;
+      pointer-events: none;
+      box-shadow: 0 0 10px rgba(144,202,249,0.5);
+    }
+    @keyframes rippleOut {
+      from { width: 0; height: 0; opacity: 1; }
+      to   { width: 160px; height: 160px; opacity: 0; }
+    }
   </style>
 </head>
 <body>
 
-  <div id="mode-screen" class="screen active">
+  <div id="splash-screen" class="screen">
+    <div class="cloud c-bg c1"></div>
+    <div class="cloud c-bg c2"></div>
+    <div class="cloud c-fg c3"></div>
+
+    <div id="particleContainer"></div>
+
+    <div class="title-area">
+      <div class="splash-subtitle">親子de</div>
+      <div class="main-title">メタバース<br>ガーデン</div>
+    </div>
+
+    <div class="fp-area">
+      <div class="fp-btn" id="fpBtn" onclick="handleTap()">
+        <svg class="progress-ring" width="94" height="94">
+          <circle class="progress-ring__circle" stroke="#fff" stroke-width="3" fill="transparent" r="45" cx="47" cy="47"/>
+        </svg>
+        <canvas id="fpCanvas" width="64" height="64"></canvas>
+      </div>
+      <div class="tap-hint">ここをタップ</div>
+      <div class="game-start-label">GAME START</div>
+    </div>
+
+    <div class="start-flash" id="startFlash">
+      <div class="start-icon">✨</div>
+      <div class="start-text">スタート！</div>
+    </div>
+  </div>
+
+  <div id="mode-screen" class="screen">
     <h1>ようこそ！✨</h1>
     <p class="subtitle">見方を選んでください</p>
 
@@ -401,6 +639,7 @@
     ];
 
     // ===== DOM =====
+    const splashScreen   = document.getElementById('splash-screen');
     const modeScreen     = document.getElementById('mode-screen');
     const modelScreen    = document.getElementById('model-screen');
     const viewerScreen   = document.getElementById('viewer-screen');
@@ -419,7 +658,7 @@
 
     // ===== 画面切り替え =====
     function goTo(screenId) {
-      [modeScreen, modelScreen, viewerScreen].forEach(s => s.classList.remove('active'));
+      [splashScreen, modeScreen, modelScreen, viewerScreen].forEach(s => s.classList.remove('active'));
       document.getElementById(screenId).classList.add('active');
     }
     window.goTo = goTo;
@@ -576,8 +815,156 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderModelButtons();
       handleDeepLink();  // pendingModelをセット（あれば）
-      goTo('mode-screen'); // 常にモード選択からスタート
+      if (pendingModel) {
+        // QRコード経由：ゲームスタート画面をスキップ
+        goTo('mode-screen');
+      } else {
+        // 通常アクセス：ゲームスタート画面を表示
+        goTo('splash-screen');
+        initSplash();
+      }
     });
+
+    // ===== スプラッシュ画面（指紋・パーティクル） =====
+    function initSplash() {
+      const pContainer = document.getElementById('particleContainer');
+      for (let i = 0; i < 15; i++) {
+        const p = document.createElement('div');
+        p.className = 'petal';
+        const size = 6 + Math.random() * 8;
+        p.style.cssText = `
+          width:${size}px; height:${size}px;
+          left:${Math.random()*100}%;
+          top:-20px;
+          animation-duration:${4 + Math.random()*5}s;
+          animation-delay:${Math.random()*4}s;
+        `;
+        pContainer.appendChild(p);
+      }
+
+      const canvas = document.getElementById('fpCanvas');
+      const ctx = canvas.getContext('2d');
+      const W = 64, H = 64, CX = 32, CY = 36;
+      const BASE_COLOR = 'rgba(144,202,249,';
+      const GLOW_COLOR = 'rgba(255,255,255,';
+      let isGlowing = false;
+
+      const loops = [];
+      for (let i = 1; i <= 14; i++) {
+        loops.push({
+          rx: 2.5 + i * 1.8,
+          ry: 1.5 + i * 1.4,
+          startAngle: Math.PI * (0.15 - i * 0.008),
+          endAngle:   Math.PI * (0.85 + i * 0.008),
+          y: i * 0.4,
+          offsetX: Math.sin(i * 0.4) * 1.5
+        });
+      }
+
+      function drawFingerprint(glow) {
+        ctx.clearRect(0, 0, W, H);
+        loops.forEach((l, i) => {
+          if (i % 5 === 0 && !glow) return;
+          const alpha = glow ? 0.9 : 0.4 + (i * 0.02);
+          const color = glow ? GLOW_COLOR : BASE_COLOR;
+          ctx.beginPath();
+          ctx.ellipse(CX + l.offsetX, CY - l.y, l.rx, l.ry, 0, l.startAngle, l.endAngle);
+          ctx.strokeStyle = color + alpha + ')';
+          ctx.lineWidth = glow ? 1.5 : 1.0;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        });
+        ctx.beginPath();
+        ctx.ellipse(CX, CY, 1.5, 1, 0, 0, Math.PI * 2);
+        ctx.strokeStyle = (glow ? GLOW_COLOR : BASE_COLOR) + (glow ? '0.9' : '0.5') + ')';
+        ctx.lineWidth = glow ? 1.5 : 1.0;
+        ctx.stroke();
+        const lines = [-10, -6, -2, 2, 6, 10];
+        lines.forEach(x => {
+          const alpha = glow ? 0.8 : 0.3;
+          const color = glow ? GLOW_COLOR : BASE_COLOR;
+          ctx.beginPath();
+          ctx.moveTo(CX + x, CY + 4 + Math.abs(x) * 0.5);
+          ctx.lineTo(CX + x + (x * 0.1), CY + 14 + Math.abs(x));
+          ctx.strokeStyle = color + alpha + ')';
+          ctx.lineWidth = glow ? 1.5 : 1.0;
+          ctx.stroke();
+        });
+        if (glow) {
+          const rad = ctx.createRadialGradient(CX, CY, 0, CX, CY, 30);
+          rad.addColorStop(0, 'rgba(255,255,255,0.3)');
+          rad.addColorStop(1, 'rgba(255,255,255,0)');
+          ctx.fillStyle = rad;
+          ctx.beginPath();
+          ctx.arc(CX, CY, 30, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+
+      function drawFingerprintPartial(lit) {
+        drawFingerprint(false);
+        for (let i = 0; i <= Math.min(lit, loops.length - 1); i++) {
+          const l = loops[i];
+          ctx.beginPath();
+          ctx.ellipse(CX + l.offsetX, CY - l.y, l.rx, l.ry, 0, l.startAngle, l.endAngle);
+          ctx.strokeStyle = 'rgba(255,255,255,0.95)';
+          ctx.lineWidth = 1.5;
+          ctx.lineCap = 'round';
+          ctx.stroke();
+        }
+      }
+
+      drawFingerprint(false);
+
+      window.handleTap = function() {
+        if (isGlowing) return;
+        isGlowing = true;
+        if (navigator.vibrate) navigator.vibrate(50);
+
+        const btn = document.getElementById('fpBtn');
+        btn.classList.add('scanning');
+        btn.style.background   = 'rgba(13,71,161,0.9)';
+        btn.style.boxShadow    = '0 0 20px #90caf9, 0 0 50px rgba(144,202,249,0.5)';
+        btn.style.borderColor  = '#fff';
+
+        for (let i = 0; i < 2; i++) {
+          setTimeout(() => {
+            const r = document.createElement('div');
+            r.className = 'ripple-ring';
+            btn.appendChild(r);
+            setTimeout(() => r.remove(), 600);
+          }, i * 150);
+        }
+
+        let step = 0;
+        const glowSteps = loops.length;
+        const stepInterval = setInterval(() => {
+          ctx.clearRect(0, 0, W, H);
+          drawFingerprintPartial(step);
+          step++;
+          if (step > glowSteps) {
+            clearInterval(stepInterval);
+            drawFingerprint(true);
+          }
+        }, 20);
+
+        setTimeout(() => {
+          document.getElementById('startFlash').classList.add('show');
+          if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+        }, 850);
+
+        setTimeout(() => {
+          document.getElementById('startFlash').classList.remove('show');
+          btn.classList.remove('scanning');
+          btn.style.boxShadow   = '';
+          btn.style.borderColor = 'rgba(144,202,249,0.6)';
+          btn.style.background  = 'rgba(13,71,161,0.7)';
+          drawFingerprint(false);
+          isGlowing = false;
+          goTo('mode-screen');
+        }, 1600);
+      };
+    }
 
   </script>
 </body>
