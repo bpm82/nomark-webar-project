@@ -576,8 +576,8 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderModelButtons();
       handleDeepLink();  // pendingModelをセット（あれば）
-      if (pendingModel) {
-        // QRコード経由：ゲームスタート画面をスキップ
+      if (pendingModel || sessionStorage.getItem('splashDone')) {
+        // QRコード経由またはスプラッシュ完了：モード選択画面を表示
         goTo('mode-screen');
       } else {
         // 通常アクセス：gamestart.html にリダイレクト

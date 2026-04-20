@@ -424,6 +424,7 @@ function handleTap() {
 
   // リセット（約1.6秒後に index.html へリダイレクト）
   setTimeout(() => {
+    sessionStorage.setItem('splashDone', '1');
     window.location.href = 'index.html';
   }, 1600);
 }
