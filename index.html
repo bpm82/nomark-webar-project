@@ -576,7 +576,13 @@
     document.addEventListener('DOMContentLoaded', () => {
       renderModelButtons();
       handleDeepLink();  // pendingModelをセット（あれば）
-      goTo('mode-screen'); // 常にモード選択からスタート
+      if (pendingModel || sessionStorage.getItem('splashDone')) {
+        // QRコード経由またはスプラッシュ完了：モード選択画面を表示
+        goTo('mode-screen');
+      } else {
+        // 通常アクセス：gamestart.html にリダイレクト
+        window.location.href = 'gamestart.html';
+      }
     });
 
   </script>
