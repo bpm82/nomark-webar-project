@@ -639,6 +639,39 @@
       }
     });
 
+    // ===== すべてのモデルでダブルタップ時にアニメーション再生 =====
+    let lastTapTime = 0;
+    let currentAnimationIndex = 0;
+
+    arViewer.addEventListener('touchend', function(event) {
+      const now = Date.now();
+      
+      // ダブルタップ判定（300ミリ秒以内に2回タップされたら）
+      if (now - lastTapTime < 300) {
+        playAnimation();
+      }
+      
+      lastTapTime = now;
+    });
+
+    // モデルのアニメーションを再生する関数
+    function playAnimation() {
+      // 読み込まれているモデルが持っているアニメーションのリストを取得
+      const animations = arViewer.availableAnimations;
+      
+      if (animations && animations.length > 0) {
+        // 次のアニメーションをセット
+        arViewer.animationName = animations[currentAnimationIndex];
+        // 確実に再生させる！
+        arViewer.play();
+        console.log(`✨ アニメーション再生: ${animations[currentAnimationIndex]}`);
+        
+        // 次回ダブルタップされた時のために、次のアニメーションの順番をセットしておく
+        currentAnimationIndex = (currentAnimationIndex + 1) % animations.length;
+      } else {
+        console.log('ℹ️ このモデルにはアニメーションが設定されていません');
+      }
+    }
   </script>
 </body>
 </html>
