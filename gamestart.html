@@ -38,58 +38,10 @@
     justify-content: space-between;
     padding: 80px 24px 56px;
     overflow: hidden;
-    background: linear-gradient(170deg, #64b5f6 0%, #1976d2 40%, #0d47a1 100%);
-  }
-
-  /* パララックス雲（遠景と近景） */
-  .cloud {
-    position: absolute;
-    background: rgba(255,255,255,0.85);
-    border-radius: 50px;
-  }
-  .cloud::before, .cloud::after {
-    content: '';
-    position: absolute;
-    background: rgba(255,255,255,0.85);
-    border-radius: 50%;
-  }
-  /* 遠景（遅い・ぼかし・不透明度低） */
-  .c-bg { filter: blur(2px); opacity: 0.5; z-index: 0; }
-  .c1 { width: 50px; height: 16px; top: 15%; left: 10%; animation: cloudDrift 35s linear infinite; }
-  .c1::before { width: 22px; height: 22px; top: -10px; left: 6px; }
-  .c1::after  { width: 18px; height: 18px; top: -8px; left: 24px; }
-  
-  .c2 { width: 60px; height: 18px; top: 25%; right: 5%; animation: cloudDrift 40s linear infinite reverse; }
-  .c2::before { width: 26px; height: 26px; top: -12px; left: 10px; }
-  .c2::after  { width: 20px; height: 20px; top: -10px; left: 30px; }
-
-  /* 近景（速い・くっきり） */
-  .c-fg { filter: blur(0px); opacity: 0.9; z-index: 1; }
-  .c3 { width: 90px; height: 26px; top: 10%; left: 45%; animation: cloudDrift 15s linear infinite; }
-  .c3::before { width: 40px; height: 40px; top: -20px; left: 10px; }
-  .c3::after  { width: 32px; height: 32px; top: -15px; left: 45px; }
-
-  @keyframes cloudDrift {
-    0%   { transform: translateX(0); }
-    50%  { transform: translateX(20px); }
-    100% { transform: translateX(0); }
-  }
-
-  /* 花びらパーティクル */
-  .petal {
-    position: absolute;
-    background: #f8bbd0;
-    border-radius: 15px 0 15px 0;
-    opacity: 0.8;
-    z-index: 2;
-    animation: fall linear infinite;
-    box-shadow: 0 0 5px rgba(255,255,255,0.3);
-  }
-  @keyframes fall {
-    0% { transform: translateY(-30px) rotate(0deg) scale(0.8); opacity: 0; }
-    10% { opacity: 0.9; }
-    80% { opacity: 0.9; }
-    100% { transform: translateY(700px) rotate(360deg) scale(1.2); opacity: 0; }
+    background-image: url('gamestart-assets/bg.png');
+    background-size: cover;
+    background-position: center;
+    background-color: #1976d2;
   }
 
   /* タイトルエリア */
@@ -103,22 +55,12 @@
     50%     { transform: translateY(-7px); }
   }
 
-  .subtitle {
-    font-size: 14px;
-    color: #e3f2fd;
-    letter-spacing: 2px; /* 字間を詰めた */
-    font-weight: 800;
-    /* デジタルな発光演出 */
-    text-shadow: 0 0 4px #fff, 0 0 8px #90caf9, 0 0 15px #1565c0;
-  }
-
-  .main-title {
-    font-family: 'Dela Gothic One', sans-serif;
-    font-size: 34px;
-    color: #fff;
-    line-height: 1.15;
-    margin: 8px 0;
-    text-shadow: 0 2px 16px rgba(0,0,80,0.6);
+  .title-logo {
+    width: 280px;
+    height: auto;
+    object-fit: contain;
+    filter: drop-shadow(0 2px 16px rgba(0,0,80,0.6));
+    z-index: 3;
   }
 
   /* 指紋ボタンエリア */
@@ -156,7 +98,7 @@
   /* プログレスバー（外周の光） */
   .progress-ring {
     position: absolute;
-    top: -2px; left: -2px; /* ボーダー幅を考慮 */
+    top: -2px; left: -2px;
     transform: rotate(-90deg);
     pointer-events: none;
     z-index: 3;
@@ -164,16 +106,15 @@
     transition: opacity 0.2s;
   }
   .progress-ring__circle {
-    stroke-dasharray: 283; /* 円周 2 * pi * r (r=45) */
+    stroke-dasharray: 283;
     stroke-dashoffset: 283;
   }
-  /* スキャン中の状態 */
   .fp-btn.scanning .progress-ring {
     opacity: 1;
   }
   .fp-btn.scanning .progress-ring__circle {
     stroke-dashoffset: 0;
-    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1); /* 速い！ */
+    transition: stroke-dashoffset 0.8s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
   .tap-hint {
@@ -252,15 +193,8 @@
 <div class="phone">
   <div class="screen" id="screen">
 
-    <div class="cloud c-bg c1"></div>
-    <div class="cloud c-bg c2"></div>
-    <div class="cloud c-fg c3"></div>
-
-    <div id="particleContainer"></div>
-
     <div class="title-area">
-      <div class="subtitle">親子de</div>
-      <div class="main-title">メタバース<br>ガーデン</div>
+      <img src="gamestart-assets/logo.png" alt="親子de メタバース・ガーデン" class="title-logo">
     </div>
 
     <div class="fp-area">
@@ -283,33 +217,16 @@
 </div>
 
 <script>
-/* ---- パララックス・花びら生成 ---- */
-const pContainer = document.getElementById('particleContainer');
-for (let i = 0; i < 15; i++) {
-  const p = document.createElement('div');
-  p.className = 'petal';
-  const size = 6 + Math.random() * 8; // 大小ばらつき
-  p.style.cssText = `
-    width:${size}px; height:${size}px;
-    left:${Math.random()*100}%;
-    top:-20px;
-    animation-duration:${4 + Math.random()*5}s;
-    animation-delay:${Math.random()*4}s;
-  `;
-  pContainer.appendChild(p);
-}
-
 /* ---- リアルな指紋描画 ---- */
 const canvas = document.getElementById('fpCanvas');
 const ctx = canvas.getContext('2d');
-const W = 64, H = 64, CX = 32, CY = 36; // 中心を少し下に
+const W = 64, H = 64, CX = 32, CY = 36;
 
 const BASE_COLOR = 'rgba(144,202,249,'; 
 const GLOW_COLOR = 'rgba(255,255,255,';
 
 let isGlowing = false;
 
-// 緻密でアシンメトリーな渦巻き状のループデータを生成
 const loops = [];
 for(let i=1; i<=14; i++) {
   loops.push({
@@ -318,7 +235,7 @@ for(let i=1; i<=14; i++) {
     startAngle: Math.PI * (0.15 - i * 0.008),
     endAngle: Math.PI * (0.85 + i * 0.008),
     y: i * 0.4,
-    offsetX: Math.sin(i * 0.4) * 1.5 // リアルな歪み
+    offsetX: Math.sin(i * 0.4) * 1.5
   });
 }
 
@@ -326,7 +243,6 @@ function drawFingerprint(glow) {
   ctx.clearRect(0, 0, W, H);
 
   loops.forEach((l, i) => {
-    // リアルさを出すため一部をかすれさせる
     if(i % 5 === 0 && !glow) return; 
 
     const alpha = glow ? 0.9 : 0.4 + (i * 0.02);
@@ -335,25 +251,22 @@ function drawFingerprint(glow) {
     ctx.beginPath();
     ctx.ellipse(CX + l.offsetX, CY - l.y, l.rx, l.ry, 0, l.startAngle, l.endAngle);
     ctx.strokeStyle = color + alpha + ')';
-    ctx.lineWidth = glow ? 1.5 : 1.0; // 通常時は細くリアルに
+    ctx.lineWidth = glow ? 1.5 : 1.0;
     ctx.lineCap = 'round';
     ctx.stroke();
   });
 
-  // 中心点
   ctx.beginPath();
   ctx.ellipse(CX, CY, 1.5, 1, 0, 0, Math.PI * 2);
   ctx.strokeStyle = (glow ? GLOW_COLOR : BASE_COLOR) + (glow ? '0.9' : '0.5') + ')';
   ctx.lineWidth = glow ? 1.5 : 1.0;
   ctx.stroke();
 
-  // 下部の縦線
   const lines = [-10, -6, -2, 2, 6, 10];
   lines.forEach(x => {
     const alpha = glow ? 0.8 : 0.3;
     const color = glow ? GLOW_COLOR : BASE_COLOR;
     ctx.beginPath();
-    // 指紋のシワっぽく高さをばらつかせる
     ctx.moveTo(CX + x, CY + 4 + Math.abs(x)*0.5);
     ctx.lineTo(CX + x + (x*0.1), CY + 14 + Math.abs(x));
     ctx.strokeStyle = color + alpha + ')';
@@ -379,20 +292,17 @@ function handleTap() {
   if (isGlowing) return;
   isGlowing = true;
 
-  // 1. 触感（バイブレーション）
   if (navigator.vibrate) {
-    navigator.vibrate(50); // 短くブルッ
+    navigator.vibrate(50);
   }
 
   const btn = document.getElementById('fpBtn');
-  // CSSアニメーション起動（プログレスバー）
   btn.classList.add('scanning');
   
   btn.style.background = 'rgba(13,71,161,0.9)';
   btn.style.boxShadow = '0 0 20px #90caf9, 0 0 50px rgba(144,202,249,0.5)';
   btn.style.borderColor = '#fff';
 
-  // 波紋演出
   for (let i = 0; i < 2; i++) {
     setTimeout(() => {
       const r = document.createElement('div');
@@ -402,7 +312,6 @@ function handleTap() {
     }, i * 150);
   }
 
-  // 指紋グロー (間隔を20msに短縮して爆速化)
   let step = 0;
   const glowSteps = loops.length;
   const stepInterval = setInterval(() => {
@@ -415,14 +324,11 @@ function handleTap() {
     }
   }, 20); 
 
-  // スタート画面への遷移（約0.8秒後）
   setTimeout(() => {
     document.getElementById('startFlash').classList.add('show');
-    // 成功のバイブレーション
     if (navigator.vibrate) navigator.vibrate([100, 50, 100]); 
   }, 850);
 
-  // リセット（約1.6秒後に index.html へリダイレクト）
   setTimeout(() => {
     sessionStorage.setItem('splashDone', '1');
     window.location.href = 'index.html';
