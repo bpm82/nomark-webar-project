@@ -384,24 +384,23 @@
     </div>
 
     <button class="viewer-ui viewer-back-btn" onclick="backFromViewer()">✕ 戻る</button>
-
-    <model-viewer
+    
+<model-viewer
   id="ar-viewer"
   src=""
   ar
-  ar-modes="webxr scene-viewer"
+  ar-modes="webxr scene-viewer quick-look"  
   camera-controls
   touch-action="pan-y"
   auto-rotate
   shadow-intensity="1"
   exposure="1">
-  
-  <!-- ボタンを model-viewer の中に移動 + slot="ar-button" を追加 -->
-  <button slot="ar-button" id="ar-launch-btn">
-    📷 ARカメラを起動する
-  </button>
-  
 </model-viewer>
+
+<!-- ボタンが model-viewer の外にある！ -->
+<button id="ar-launch-btn" onclick="launchAR()">
+  📷 ARカメラを起動する
+</button>
 
     <button id="ar-launch-btn" onclick="launchAR()">
       📷 ARカメラを起動する
@@ -570,7 +569,21 @@
       arViewer.addEventListener('error', onError);
     }
 
-    
+window.launchAR = async function() {
+  arLaunchBtn.style.display = 'none';
+  try {
+    if (arViewer.canActivateAR) {
+      await arViewer.activateAR();
+    } else {
+      showError('ARが利用できません');
+      arLaunchBtn.style.display = 'block';
+    }
+  } catch (e) {
+    console.error(e);
+    showError('AR起動に失敗しました');
+    arLaunchBtn.style.display = 'block';
+  }
+};
 
     // ===== ビューアーから戻る =====
     window.backFromViewer = function() {
