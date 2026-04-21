@@ -642,20 +642,40 @@ window.launchAR = async function() {
       }
     });
 
-    // ===== すべてのモデルでダブルタップ時にアニメーション再生 =====
-    let lastTapTime = 0;
-    let currentAnimationIndex = 0;
+// ===== すべてのモデルでダブルタップ時にアニメーション再生 =====
+let lastTapTime = 0;
+let currentAnimationIndex = 0;
 
-    arViewer.addEventListener('touchend', function(event) {
-      const now = Date.now();
-      
-      // ダブルタップ判定（300ミリ秒以内に2回タップされたら）
-      if (now - lastTapTime < 300) {
-        playAnimation();
-      }
-      
-      lastTapTime = now;
-    });
+arViewer.addEventListener('touchend', function(event) {
+  const now = Date.now();
+  
+  // ダブルタップ判定（300ミリ秒以内に2回タップされたら）
+  if (now - lastTapTime < 300) {
+    
+    // ★これが「ダブルタップで拡大させない」ための魔法の1行です！★
+    event.preventDefault();  
+    
+    playAnimation();
+  }
+  
+  lastTapTime = now;
+}, { passive: false }); // スマホのタッチエラーを防ぐおまじない
+
+// モデルのアニメーションを再生する関数
+function playAnimation() {
+  const animations = arViewer.availableAnimations;
+  
+  if (animations && animations.length > 0) {
+    // animationName を設定するだけで自動的に再生されます
+    arViewer.animationName = animations[currentAnimationIndex];
+    console.log(`✨ アニメーション再生: ${animations[currentAnimationIndex]}`);
+    
+    // 次回のためにインデックスを進める
+    currentAnimationIndex = (currentAnimationIndex + 1) % animations.length;
+  } else {
+    console.log('ℹ️ このモデルにはアニメーションが設定されていません');
+  }
+}
 
     // モデルのアニメーションを再生する関数
     function playAnimation() {
