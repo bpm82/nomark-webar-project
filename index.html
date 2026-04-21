@@ -176,6 +176,18 @@
       background: #F2F2F7;
     }
 
+    .model-btn-personal {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #FF2D87, #FF8DC7);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255, 45, 135, 0.3);
+    }
+
+    .model-btn-personal:active {
+      transform: scale(0.96);
+      background: linear-gradient(135deg, #e0206e, #f07daf);
+    }
+
     /* ===== スクリーン3：ビューアー（フルスクリーン） ===== */
  #viewer-screen {
       position: fixed;
@@ -414,8 +426,9 @@
     const errorEl        = document.getElementById('error-message');
 
     // ===== 状態 =====
-    let currentMode = null;   // 'ar' | 'viewer'
-    let pendingModel = null;  // URLパラメータで指定されたモデル名
+    let currentMode   = null;  // 'ar' | 'viewer'
+    let pendingModel  = null;  // URLパラメータで指定されたモデル名（公開モデル・QR）
+    let personalModel = null;  // URLパラメータで指定された個人モデル名
 
     // ===== 画面切り替え =====
     function goTo(screenId) {
@@ -462,6 +475,17 @@
     // ===== モデルボタン生成 =====
     function renderModelButtons() {
       modelContainer.innerHTML = '';
+
+      // 個人モデルが指定されていたら最上部に特別枠ボタンを表示
+      if (personalModel) {
+        const btn = document.createElement('button');
+        btn.className = 'model-btn model-btn-personal';
+        btn.textContent = '✨ 特別枠';
+        btn.setAttribute('aria-label', '特別枠モデルを見る');
+        btn.onclick = () => loadModel(personalModel);
+        modelContainer.appendChild(btn);
+      }
+
       MODELS.forEach(model => {
         const btn = document.createElement('button');
         btn.className   = 'model-btn';
@@ -473,20 +497,30 @@
 
     // ===== モデル読み込み =====
     function loadModel(modelName) {
-      const found = MODELS.find(m => m.name === modelName);
-      if (!found) {
-        showError(`❌ モデル「${modelName}」は登録されていません。`);
-        goTo('mode-screen');
-        return;
+      let modelPath, modelLabel;
+
+      if (modelName.startsWith('personal/')) {
+        // 個人モデル：assets/models/personal/XX/model.glb
+        modelPath  = `./assets/models/${modelName}/model.glb`;
+        modelLabel = '特別モデル ✨';
+      } else {
+        const found = MODELS.find(m => m.name === modelName);
+        if (!found) {
+          showError(`❌ モデル「${modelName}」は登録されていません。`);
+          goTo('mode-screen');
+          return;
+        }
+        modelPath  = `./assets/models/${modelName}.glb`;
+        modelLabel = found.label;
       }
 
       showLoading(true, currentMode === 'ar' ? 'ARを準備中...' : 'モデルを読み込み中...');
-      viewerLabel.textContent    = found.label;
+      viewerLabel.textContent    = modelLabel;
       arLaunchBtn.style.display  = 'none';
 
       arViewer.src = '';
       arViewer.removeAttribute('ios-src'); // model-viewerの自動USDZ変換を使う
-      arViewer.src = `./assets/models/${modelName}.glb`;
+      arViewer.src = modelPath;
 
       goTo('viewer-screen');
 
@@ -507,7 +541,7 @@
 
       const onError = () => {
         showLoading(false);
-        showError(`❌ assets/models/${modelName}.glb が見つかりません。`);
+        showError(`❌ ${modelPath} が見つかりません。`);
         goTo('mode-screen'); // エラー時はモード選択に戻す
         cleanup();
       };
@@ -555,13 +589,25 @@
     // ===== URLパラメータ確認（ディープリンク） =====
     /*
      * ?model=flower が付いていたらモデル名を pendingModel に保存するだけ。
-     * 実際の起動は selectMode() 内で行う（モード選択後）。
+     * ?model=personal/01 が付いていたら personalModel に保存し、
+     * モデル選択画面に特別ボタンを表示する。
      * QRを読んでも必ずモード選択を通る設計。
      */
     function handleDeepLink() {
       const params    = new URLSearchParams(window.location.search);
       const modelName = params.get('model');
       if (!modelName) return;
+
+      if (modelName.startsWith('personal/')) {
+        // 個人モデル：パストラバーサル防止のため英数字・ハイフン・アンダースコアのみ許可（最大50文字）
+        if (!/^personal\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,49}$/.test(modelName)) {
+          showError('❌ 無効な個人モデル名です。');
+          return;
+        }
+        personalModel = modelName;
+        console.log(`🔗 個人モデル検出: model=${modelName} → 特別枠ボタンを表示`);
+        return;
+      }
 
       const found = MODELS.find(m => m.name === modelName);
       if (found) {
@@ -574,10 +620,10 @@
 
     // ===== 初期化 =====
     document.addEventListener('DOMContentLoaded', () => {
-      renderModelButtons();
-      handleDeepLink();  // pendingModelをセット（あれば）
-      if (pendingModel || sessionStorage.getItem('splashDone')) {
-        // QRコード経由またはスプラッシュ完了：モード選択画面を表示
+      handleDeepLink();  // personalModel / pendingModel をセット（あれば）
+      renderModelButtons();  // personalModel が確定してからボタンを描画
+      if (pendingModel || personalModel || sessionStorage.getItem('splashDone')) {
+        // QRコード経由・個人モデルURL・スプラッシュ完了：モード選択画面を表示
         goTo('mode-screen');
       } else {
         // 通常アクセス：gamestart.html にリダイレクト
