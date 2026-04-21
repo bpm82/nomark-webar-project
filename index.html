@@ -63,7 +63,7 @@
       margin-bottom: 40px;
     }
 
-        /* ===== 戻るボタン ===== */
+       /* ===== 戻るボタン ===== */
     .back-btn {
       display: block;
       padding: 16px 24px;
@@ -76,10 +76,9 @@
       color: #007AFF;
       width: 100%;
       margin-top: auto;
-      margin-bottom: 40px; /* ← ★これを追加して上に押し上げる！ */
+      margin-bottom: calc(20px + env(safe-area-inset-bottom)); /* ← スマホに合わせて自動で最高の位置に調整！ */
       transition: background 0.15s ease;
     }
-
 
     .back-btn:active { background: #D1D1D6; }
 
