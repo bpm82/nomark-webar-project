@@ -278,6 +278,39 @@
       box-shadow: 0 4px 14px rgba(255, 45, 85, 0.3);
     }
 
+    /* ===== 風船コントロールボタン ===== */
+    #balloon-controls {
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      display: none;
+    }
+
+    #balloon-toggle-btn {
+      padding: 16px 32px;
+      color: white;
+      border: none;
+      border-radius: 50px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      background: linear-gradient(135deg, #FF9500, #FF3B30);
+    }
+
+    #balloon-toggle-btn:active {
+      transform: scale(0.95);
+      box-shadow: 0 3px 10px rgba(0, 0, 0, 0.15);
+    }
+
+    #balloon-toggle-btn.catching {
+      background: linear-gradient(135deg, #34C759, #007AFF);
+    }
+
     /* ===== ローディング ===== */
     #loading {
       position: fixed;
@@ -407,6 +440,11 @@
       📷 ARカメラを起動する
     </button>
 
+    <!-- 風船コントロール（Balloon モデルのみ表示） -->
+    <div id="balloon-controls">
+      <button id="balloon-toggle-btn" onclick="toggleBalloon()">🎈 手を放す</button>
+    </div>
+
   </div>
 
   <div id="loading">
@@ -439,11 +477,15 @@
     const loadingEl      = document.getElementById('loading');
     const loadingText    = document.getElementById('loading-text');
     const errorEl        = document.getElementById('error-message');
+    const balloonControls  = document.getElementById('balloon-controls');
+    const balloonToggleBtn = document.getElementById('balloon-toggle-btn');
 
     // ===== 状態 =====
     let currentMode   = null;  // 'ar' | 'viewer'
     let pendingModel  = null;  // URLパラメータで指定されたモデル名（公開モデル・QR）
     let personalModel = null;  // URLパラメータで指定された個人モデル名
+    let isBalloonModel  = false; // 現在のモデルが風船かどうか
+    let balloonReleased = false; // 風船を手放した状態かどうか
 
     // ===== 画面切り替え =====
     function goTo(screenId) {
@@ -552,6 +594,17 @@
             showError('📵 このデバイスはARに対応していません。3Dビューアーとして表示します。');
           }
         }
+
+        // 風船モデルのみコントロールボタンを表示（個人モデルは対象外）
+        isBalloonModel = !modelName.startsWith('personal/') && modelName === 'Balloon';
+        balloonReleased = false;
+        if (isBalloonModel) {
+          balloonToggleBtn.textContent = '🎈 手を放す';
+          balloonToggleBtn.classList.remove('catching');
+          balloonControls.style.display = 'block';
+        } else {
+          balloonControls.style.display = 'none';
+        }
       };
 
       const onError = () => {
@@ -591,6 +644,9 @@ window.launchAR = async function() {
       arViewer.src = '';
       arViewer.removeAttribute('ios-src');
       arLaunchBtn.style.display = 'none';
+      balloonControls.style.display = 'none';
+      isBalloonModel = false;
+      balloonReleased = false;
 
       // pendingModel（QRアクセス）がある場合 → モード選択へ
       // 通常アクセスの場合 → モデル選択へ
@@ -647,6 +703,9 @@ window.launchAR = async function() {
     let currentAnimationIndex = 0;
 
     arViewer.addEventListener('touchend', function(event) {
+      // 風船モデルはダブルタップによるアニメーション操作を無効化
+      if (isBalloonModel) return;
+
       const now = Date.now();
       
       // ダブルタップ判定（300ミリ秒以内に2回タップされたら）
@@ -675,6 +734,34 @@ window.launchAR = async function() {
         console.log('ℹ️ このモデルにはアニメーションが設定されていません');
       }
     }
+
+    // ===== 風船コントロール =====
+    window.toggleBalloon = function() {
+      if (!isBalloonModel) return;
+
+      if (!balloonReleased) {
+        // 手を放す → 飛ぶアニメーション再生
+        const animations = arViewer.availableAnimations;
+        if (animations && animations.length > 0) {
+          arViewer.animationName = animations[0];
+          arViewer.play({ repetitions: 1 });
+          console.log(`🎈 風船を手放した: ${animations[0]}`);
+        } else {
+          console.log('ℹ️ 風船にアニメーションが設定されていません');
+        }
+        balloonReleased = true;
+        balloonToggleBtn.textContent = '✋ 風船を捕まえる';
+        balloonToggleBtn.classList.add('catching');
+      } else {
+        // 風船を捕まえる → 元の位置にリセット
+        arViewer.pause();
+        arViewer.currentTime = 0;
+        console.log('✋ 風船を捕まえた: 元の位置にリセット');
+        balloonReleased = false;
+        balloonToggleBtn.textContent = '🎈 手を放す';
+        balloonToggleBtn.classList.remove('catching');
+      }
+    };
   </script>
 </body>
 </html>
