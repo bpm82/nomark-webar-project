@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>WebAR 風船 – Three.js</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+    html, body {
+      width: 100%; height: 100%;
+      overflow: hidden;
+      background: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Kaku Gothic ProN", sans-serif;
+    }
+
+    canvas { display: block; }
+
+    /* ===== UI overlay ===== */
+    #ui {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    /* top bar */
+    #top-bar {
+      position: absolute;
+      top: env(safe-area-inset-top, 16px);
+      left: 0; right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 16px;
+      pointer-events: auto;
+    }
+
+    #balloon-count {
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 8px 16px;
+      border-radius: 20px;
+      letter-spacing: 0.3px;
+    }
+
+    #exit-btn {
+      pointer-events: auto;
+      background: rgba(255,59,48,0.85);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 700;
+      padding: 8px 18px;
+      border: none;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+
+    /* hint text */
+    #hint {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: rgba(0,0,0,0.55);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: #fff;
+      font-size: 15px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 20px;
+      white-space: nowrap;
+      text-align: center;
+      pointer-events: none;
+      transition: opacity 0.4s;
+    }
+    #hint.hidden { opacity: 0; pointer-events: none; }
+
+    /* bottom buttons */
+    #bottom-bar {
+      position: absolute;
+      bottom: calc(env(safe-area-inset-bottom, 20px) + 20px);
+      left: 0; right: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+      pointer-events: auto;
+    }
+
+    .action-btn {
+      padding: 16px 36px;
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      font-size: 17px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+      display: none;
+    }
+    .action-btn:active { transform: scale(0.95); box-shadow: 0 3px 10px rgba(0,0,0,0.2); }
+
+    #place-btn {
+      background: linear-gradient(135deg, #007AFF, #34C759);
+    }
+
+    #release-btn {
+      background: linear-gradient(135deg, #FF9500, #FF3B30);
+    }
+
+    #catch-btn {
+      background: linear-gradient(135deg, #34C759, #007AFF);
+    }
+
+    /* start / not-supported screens */
+    #start-screen, #nosupport-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(160deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
+      color: #fff;
+      gap: 20px;
+      padding: 32px;
+      z-index: 100;
+    }
+    #nosupport-screen { display: none; }
+
+    #start-screen h1 { font-size: 28px; font-weight: 800; text-align: center; line-height: 1.3; }
+    #start-screen p  { font-size: 15px; opacity: 0.75; text-align: center; line-height: 1.6; }
+
+    #start-btn {
+      margin-top: 8px;
+      padding: 18px 48px;
+      background: linear-gradient(135deg, #FF9500, #FF3B30);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(255,59,48,0.5);
+    }
+
+    #nosupport-screen h2 { font-size: 22px; text-align: center; }
+    #nosupport-screen p  { font-size: 14px; opacity: 0.7; text-align: center; line-height: 1.6; }
+    #nosupport-screen a  { color: #FF9500; }
+
+    #back-btn {
+      padding: 12px 28px;
+      background: rgba(255,255,255,0.15);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      font-size: 15px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<!-- Start screen -->
+<div id="start-screen">
+  <h1>🎈 AR 風船</h1>
+  <p>床をスキャンして風船を置き、<br>空に飛ばしましょう！<br><br>Android Chrome 推奨<br>（iOS 非対応）</p>
+  <button id="start-btn" onclick="startAR()">📷 ARを起動する</button>
+  <button id="back-btn" onclick="history.back()">← 戻る</button>
+</div>
+
+<!-- Not supported screen -->
+<div id="nosupport-screen">
+  <h2>⚠️ AR 非対応</h2>
+  <p>このデバイス・ブラウザは WebXR Hit Test に対応していません。<br><br>
+    <strong>Android Chrome</strong> でお試しください。<br><br>
+    <a href="https://immersiveweb.dev/" target="_blank">詳細はこちら</a>
+  </p>
+  <button id="back-btn2" onclick="history.back()">← 戻る</button>
+</div>
+
+<!-- AR UI overlay -->
+<div id="ui" style="display:none;">
+  <div id="top-bar">
+    <div id="balloon-count">🎈 0 個</div>
+    <button id="exit-btn" onclick="exitAR()">✕ 終了</button>
+  </div>
+
+  <div id="hint">床をゆっくり動かしてスキャン中…</div>
+
+  <div id="bottom-bar">
+    <button id="place-btn"   class="action-btn" onclick="placeBalloon()">📍 ここに風船を置く</button>
+    <button id="release-btn" class="action-btn" onclick="releaseAllBalloons()">🎈 手を放す</button>
+    <button id="catch-btn"   class="action-btn" onclick="catchAllBalloons()">✋ 風船を捕まえる</button>
+  </div>
+</div>
+
+<!-- Three.js + WebXR -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://cdn.jsdelivr.net/npm/three@0.165.0/build/three.module.js",
+    "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.165.0/examples/jsm/"
+  }
+}
+</script>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+
+// ===== globals =====
+let renderer, scene, camera;
+let xrSession = null;
+let hitTestSource = null;
+let hitTestSourceRequested = false;
+let reticle;
+let reticleVisible = false;
+let balloonTemplate = null; // loaded GLTF scene
+let balloons = [];          // { mesh, released, velocity, wind, age }
+let balloonCount = 0;
+
+const BALLOON_MODEL_PATH = './assets/models/Balloon.glb';
+
+// DOM refs
+const startScreen    = document.getElementById('start-screen');
+const nosupportScreen= document.getElementById('nosupport-screen');
+const uiEl           = document.getElementById('ui');
+const hintEl         = document.getElementById('hint');
+const placeBtnEl     = document.getElementById('place-btn');
+const releaseBtnEl   = document.getElementById('release-btn');
+const catchBtnEl     = document.getElementById('catch-btn');
+const countEl        = document.getElementById('balloon-count');
+
+// ===== Check WebXR support =====
+async function checkSupport() {
+  if (!navigator.xr) return false;
+  try {
+    return await navigator.xr.isSessionSupported('immersive-ar');
+  } catch { return false; }
+}
+
+// ===== Start AR =====
+window.startAR = async function() {
+  const supported = await checkSupport();
+  if (!supported) {
+    startScreen.style.display = 'none';
+    nosupportScreen.style.display = 'flex';
+    return;
+  }
+
+  // Init Three.js
+  initThree();
+
+  // Load balloon model
+  await loadBalloonModel();
+
+  // Request XR session
+  try {
+    xrSession = await navigator.xr.requestSession('immersive-ar', {
+      requiredFeatures: ['hit-test'],
+      optionalFeatures: ['dom-overlay', 'local-floor'],
+      domOverlay: { root: uiEl },
+    });
+  } catch(e) {
+    console.error('XR session failed', e);
+    nosupportScreen.style.display = 'flex';
+    startScreen.style.display = 'none';
+    return;
+  }
+
+  startScreen.style.display = 'none';
+  uiEl.style.display = 'block';
+
+  renderer.xr.setReferenceSpaceType('local');
+  await renderer.xr.setSession(xrSession);
+
+  xrSession.addEventListener('end', onSessionEnd);
+
+  renderer.setAnimationLoop(onXRFrame);
+};
+
+// ===== Init Three.js =====
+function initThree() {
+  renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  renderer.setPixelRatio(window.devicePixelRatio);
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.xr.enabled = true;
+  document.body.appendChild(renderer.domElement);
+
+  scene = new THREE.Scene();
+
+  camera = new THREE.PerspectiveCamera(70, window.innerWidth / window.innerHeight, 0.01, 100);
+
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 1.2);
+  scene.add(ambient);
+  const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
+  dirLight.position.set(1, 3, 2);
+  scene.add(dirLight);
+
+  // Reticle
+  const reticleGeo = new THREE.RingGeometry(0.07, 0.10, 32);
+  reticleGeo.applyMatrix4(new THREE.Matrix4().makeRotationX(-Math.PI / 2));
+  const reticleMat = new THREE.MeshBasicMaterial({ color: 0x00ffcc, side: THREE.DoubleSide });
+  reticle = new THREE.Mesh(reticleGeo, reticleMat);
+  reticle.matrixAutoUpdate = false;
+  reticle.visible = false;
+  scene.add(reticle);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+}
+
+// ===== Load Balloon GLB =====
+async function loadBalloonModel() {
+  return new Promise((resolve, reject) => {
+    const loader = new GLTFLoader();
+    loader.load(
+      BALLOON_MODEL_PATH,
+      (gltf) => {
+        balloonTemplate = gltf.scene;
+        // Scale down if needed
+        const box = new THREE.Box3().setFromObject(balloonTemplate);
+        const size = box.getSize(new THREE.Vector3());
+        const maxDim = Math.max(size.x, size.y, size.z);
+        if (maxDim > 0.5) {
+          const scale = 0.3 / maxDim;
+          balloonTemplate.scale.setScalar(scale);
+        }
+        console.log('✅ Balloon.glb loaded');
+        resolve();
+      },
+      undefined,
+      (err) => {
+        console.error('❌ Failed to load Balloon.glb', err);
+        // Create fallback sphere balloon
+        const geo = new THREE.SphereGeometry(0.12, 24, 16);
+        const mat = new THREE.MeshPhongMaterial({ color: 0xff3b6f, shininess: 60 });
+        balloonTemplate = new THREE.Mesh(geo, mat);
+        resolve();
+      }
+    );
+  });
+}
+
+// ===== XR Frame loop =====
+const clock = new THREE.Clock();
+
+function onXRFrame(timestamp, frame) {
+  if (!frame) return;
+
+  const delta = clock.getDelta();
+
+  // Hit test
+  const session = renderer.xr.getSession();
+  const refSpace = renderer.xr.getReferenceSpace();
+
+  if (!hitTestSourceRequested) {
+    session.requestReferenceSpace('viewer').then((viewerSpace) => {
+      session.requestHitTestSource({ space: viewerSpace }).then((src) => {
+        hitTestSource = src;
+      });
+    });
+    hitTestSourceRequested = true;
+  }
+
+  if (hitTestSource) {
+    const hitResults = frame.getHitTestResults(hitTestSource);
+    if (hitResults.length > 0) {
+      const hit = hitResults[0];
+      const pose = hit.getPose(refSpace);
+      reticle.visible = true;
+      reticle.matrix.fromArray(pose.transform.matrix);
+      reticleVisible = true;
+
+      // Show place button once floor detected
+      if (placeBtnEl.style.display !== 'block') {
+        placeBtnEl.style.display = 'block';
+        hintEl.classList.add('hidden');
+      }
+    } else {
+      reticle.visible = false;
+      reticleVisible = false;
+    }
+  }
+
+  // Update balloons
+  updateBalloons(delta);
+
+  renderer.render(scene, camera);
+}
+
+// ===== Place Balloon =====
+window.placeBalloon = function() {
+  if (!reticleVisible || !balloonTemplate) return;
+
+  const clone = balloonTemplate.clone(true);
+
+  // Position from reticle matrix
+  const pos = new THREE.Vector3();
+  const quat = new THREE.Quaternion();
+  const scale = new THREE.Vector3();
+  reticle.matrix.decompose(pos, quat, scale);
+
+  clone.position.copy(pos);
+  clone.rotation.set(0, Math.random() * Math.PI * 2, 0);
+
+  scene.add(clone);
+
+  const balloon = {
+    mesh: clone,
+    released: false,
+    basePosition: pos.clone(),
+    velocity: new THREE.Vector3(0, 0, 0),
+    wind: new THREE.Vector3(
+      (Math.random() - 0.5) * 0.002,
+      0,
+      (Math.random() - 0.5) * 0.002
+    ),
+    phase: Math.random() * Math.PI * 2,  // for bob animation
+    age: 0,
+  };
+
+  balloons.push(balloon);
+  balloonCount++;
+  updateCountDisplay();
+
+  // Update button visibility
+  updateActionButtons();
+};
+
+// ===== Update Balloon Physics =====
+function updateBalloons(delta) {
+  const toRemove = [];
+
+  for (const b of balloons) {
+    b.age += delta;
+
+    if (b.released) {
+      // Rise + drift
+      b.velocity.y += 0.0025;          // buoyancy
+      b.velocity.y = Math.min(b.velocity.y, 0.015);
+      b.velocity.x += b.wind.x;
+      b.velocity.z += b.wind.z;
+
+      // Slight horizontal drift oscillation
+      b.velocity.x += Math.sin(b.age * 1.3 + b.phase) * 0.00008;
+
+      b.mesh.position.addScaledVector(b.velocity, 1);
+
+      // Gentle rotation while flying
+      b.mesh.rotation.y += delta * 0.5;
+      b.mesh.rotation.z = Math.sin(b.age * 1.1) * 0.06;
+
+      // Remove if too high (out of view, ~8 m above floor)
+      if (b.mesh.position.y > b.basePosition.y + 8) {
+        toRemove.push(b);
+      }
+    } else {
+      // Idle bobbing
+      const bob = Math.sin(b.age * 1.8 + b.phase) * 0.008;
+      b.mesh.position.y = b.basePosition.y + bob;
+      b.mesh.rotation.z = Math.sin(b.age * 1.2 + b.phase) * 0.04;
+    }
+  }
+
+  // Remove escaped balloons
+  for (const b of toRemove) {
+    scene.remove(b.mesh);
+    balloons.splice(balloons.indexOf(b), 1);
+    balloonCount--;
+  }
+  if (toRemove.length > 0) {
+    updateCountDisplay();
+    updateActionButtons();
+  }
+}
+
+// ===== Release all balloons =====
+window.releaseAllBalloons = function() {
+  for (const b of balloons) {
+    if (!b.released) {
+      b.released = true;
+      b.velocity.set(
+        (Math.random() - 0.5) * 0.005,
+        0.002,
+        (Math.random() - 0.5) * 0.005
+      );
+    }
+  }
+  updateActionButtons();
+};
+
+// ===== Catch all balloons =====
+window.catchAllBalloons = function() {
+  for (const b of balloons) {
+    b.released = false;
+    b.velocity.set(0, 0, 0);
+    b.mesh.position.copy(b.basePosition);
+    b.mesh.rotation.set(0, b.mesh.rotation.y, 0);
+    b.age = 0;
+  }
+  updateActionButtons();
+};
+
+// ===== UI helpers =====
+function updateCountDisplay() {
+  countEl.textContent = `🎈 ${balloonCount} 個`;
+}
+
+function updateActionButtons() {
+  const hasBalloons = balloons.length > 0;
+  const anyReleased  = balloons.some(b => b.released);
+  const anyHeld      = balloons.some(b => !b.released);
+
+  releaseBtnEl.style.display = (hasBalloons && anyHeld)     ? 'block' : 'none';
+  catchBtnEl.style.display   = (hasBalloons && anyReleased) ? 'block' : 'none';
+}
+
+// ===== Exit AR =====
+window.exitAR = async function() {
+  if (xrSession) {
+    await xrSession.end();
+  }
+};
+
+function onSessionEnd() {
+  xrSession = null;
+  hitTestSource = null;
+  hitTestSourceRequested = false;
+  renderer.setAnimationLoop(null);
+
+  // Clean up
+  renderer.dispose();
+  if (renderer.domElement && renderer.domElement.parentNode) {
+    renderer.domElement.parentNode.removeChild(renderer.domElement);
+  }
+  balloons = [];
+  balloonCount = 0;
+
+  uiEl.style.display = 'none';
+  startScreen.style.display = 'flex';
+  updateCountDisplay();
+  placeBtnEl.style.display = 'none';
+  releaseBtnEl.style.display = 'none';
+  catchBtnEl.style.display = 'none';
+  hintEl.classList.remove('hidden');
+}
+</script>
+</body>
+</html>
