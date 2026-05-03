@@ -595,13 +595,14 @@
           }
         }
 
-        // 風船モデルのみコントロールボタンを表示（個人モデルは対象外）
-        isBalloonModel = !modelName.startsWith('personal/') && modelName === 'Balloon';
+        // 風船モデルのみコントロールボタンを表示（AR モードのみ、個人モデルは対象外）
+        isBalloonModel = !modelName.startsWith('personal/') && modelName === 'Balloon' && currentMode === 'ar';
         balloonReleased = false;
         if (isBalloonModel) {
           balloonToggleBtn.textContent = '🎈 手を放す';
           balloonToggleBtn.classList.remove('catching');
           balloonControls.style.display = 'block';
+          console.log('🎈 風船コントロールを表示しました');
         } else {
           balloonControls.style.display = 'none';
         }
@@ -737,14 +738,17 @@ window.launchAR = async function() {
 
     // ===== 風船コントロール =====
     window.toggleBalloon = function() {
-      if (!isBalloonModel) return;
+      if (!isBalloonModel) {
+        console.log('風船モデルが読み込まれていません');
+        return;
+      }
 
       if (!balloonReleased) {
         // 手を放す → 飛ぶアニメーション再生
         const animations = arViewer.availableAnimations;
         if (animations && animations.length > 0) {
           arViewer.animationName = animations[0];
-          arViewer.play({ repetitions: 1 });
+          arViewer.play();
           console.log(`🎈 風船を手放した: ${animations[0]}`);
         } else {
           console.log('ℹ️ 風船にアニメーションが設定されていません');
@@ -755,7 +759,11 @@ window.launchAR = async function() {
       } else {
         // 風船を捕まえる → 元の位置にリセット
         arViewer.pause();
-        arViewer.currentTime = 0;
+        // モデルをリセット
+        arViewer.src = '';
+        setTimeout(() => {
+          arViewer.src = './assets/models/Balloon.glb';
+        }, 100);
         console.log('✋ 風船を捕まえた: 元の位置にリセット');
         balloonReleased = false;
         balloonToggleBtn.textContent = '🎈 手を放す';
