@@ -1,0 +1,1214 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Web Archery AR</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Noto+Sans+JP:wght@300;400;700&display=swap');
+
+  :root {
+    --gold: #c8a84b;
+    --gold-light: #e8c97a;
+    --dark: #0a0a0f;
+    --dark2: #12121a;
+    --dark3: #1c1c28;
+    --text: #e8e4d8;
+    --text-muted: #888070;
+    --accent: #4a9eff;
+    --danger: #ff4a4a;
+    --green: #4aff88;
+    --radius: 8px;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+  body {
+    background: var(--dark);
+    color: var(--text);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-weight: 300;
+    overflow: hidden;
+    width: 100vw;
+    height: 100vh;
+    touch-action: none;
+    user-select: none;
+  }
+
+  /* ── SCREENS ── */
+  .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; transition: opacity 0.4s; }
+  .screen.hidden { opacity: 0; pointer-events: none; }
+
+  /* ── TITLE SCREEN ── */
+  #title-screen {
+    background: radial-gradient(ellipse at 50% 40%, #1a1a2e 0%, var(--dark) 70%);
+  }
+  .title-ring {
+    width: 200px; height: 200px;
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    position: relative;
+    margin-bottom: 32px;
+    animation: pulse-ring 3s ease-in-out infinite;
+  }
+  .title-ring::before, .title-ring::after {
+    content: '';
+    position: absolute;
+    border-radius: 50%;
+    border: 1px solid var(--gold);
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  .title-ring::before { width: 140px; height: 140px; opacity: 0.5; }
+  .title-ring::after  { width: 80px;  height: 80px;  opacity: 0.3; }
+  .title-dot {
+    width: 12px; height: 12px;
+    background: var(--gold);
+    border-radius: 50%;
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+  }
+  @keyframes pulse-ring { 0%,100%{box-shadow:0 0 0 0 rgba(200,168,75,0)} 50%{box-shadow:0 0 24px 4px rgba(200,168,75,0.2)} }
+
+  h1 {
+    font-family: 'Cinzel', serif;
+    font-size: 2.4rem;
+    font-weight: 700;
+    letter-spacing: 0.15em;
+    color: var(--gold);
+    text-shadow: 0 0 30px rgba(200,168,75,0.4);
+    margin-bottom: 8px;
+  }
+  .subtitle { font-size: 0.85rem; letter-spacing: 0.3em; color: var(--text-muted); margin-bottom: 48px; }
+
+  .btn-group { display: flex; flex-direction: column; gap: 12px; width: 260px; }
+  .btn {
+    padding: 14px 24px;
+    border: 1px solid var(--gold);
+    background: transparent;
+    color: var(--gold);
+    font-family: 'Noto Sans JP', sans-serif;
+    font-size: 0.9rem;
+    letter-spacing: 0.1em;
+    border-radius: var(--radius);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    position: relative;
+    overflow: hidden;
+  }
+  .btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: var(--gold);
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+  .btn:active { transform: scale(0.97); }
+  .btn:active::before { opacity: 0.15; }
+  .btn.primary { background: var(--gold); color: var(--dark); font-weight: 700; }
+  .btn.primary::before { background: #fff; }
+  .btn.small { padding: 10px 20px; font-size: 0.8rem; }
+  .btn.danger { border-color: var(--danger); color: var(--danger); }
+
+  /* ── AR SCREEN ── */
+  #ar-screen { background: #000; }
+  #camera-video {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    object-fit: cover;
+  }
+  #ar-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+  }
+  #ui-overlay {
+    position: absolute; inset: 0;
+    pointer-events: none;
+  }
+
+  /* Crosshair */
+  .crosshair {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px; height: 80px;
+    pointer-events: none;
+  }
+  .crosshair-ring {
+    position: absolute; inset: 0;
+    border: 1.5px solid rgba(255,255,255,0.8);
+    border-radius: 50%;
+    animation: crosshair-pulse 2s ease-in-out infinite;
+  }
+  .crosshair-line-h, .crosshair-line-v {
+    position: absolute;
+    background: rgba(255,255,255,0.8);
+  }
+  .crosshair-line-h { width: 24px; height: 1px; top: 50%; transform: translateY(-50%); }
+  .crosshair-line-h.left  { left: -32px; }
+  .crosshair-line-h.right { right: -32px; }
+  .crosshair-line-v { width: 1px; height: 24px; left: 50%; transform: translateX(-50%); }
+  .crosshair-line-v.top    { top: -32px; }
+  .crosshair-line-v.bottom { bottom: -32px; }
+  @keyframes crosshair-pulse { 0%,100%{opacity:0.7} 50%{opacity:1} }
+
+  /* Lock indicator */
+  .lock-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    width: 120px; height: 120px;
+    border: 2px solid var(--accent);
+    border-radius: 50%;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s, width 0.3s, height 0.3s;
+    box-shadow: 0 0 12px var(--accent);
+  }
+  .lock-ring.visible { opacity: 1; }
+
+  /* HUD top bar */
+  .hud-top {
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    padding: 16px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    pointer-events: none;
+    background: linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%);
+  }
+  .hud-score {
+    font-family: 'Cinzel', serif;
+    font-size: 1.8rem;
+    color: var(--gold);
+    line-height: 1;
+  }
+  .hud-score-label { font-size: 0.65rem; letter-spacing: 0.2em; color: var(--text-muted); }
+  .hud-arrows {
+    display: flex; gap: 8px; align-items: center;
+  }
+  .arrow-pip {
+    width: 10px; height: 28px;
+    background: var(--gold);
+    border-radius: 5px;
+    transition: background 0.3s, opacity 0.3s;
+  }
+  .arrow-pip.used { background: transparent; border: 1px solid var(--text-muted); opacity: 0.4; }
+  .hud-mode { font-size: 0.7rem; letter-spacing: 0.2em; color: var(--text-muted); }
+
+  /* Distance readout */
+  .distance-readout {
+    position: absolute;
+    bottom: 180px; left: 50%;
+    transform: translateX(-50%);
+    background: rgba(0,0,0,0.7);
+    border: 1px solid var(--accent);
+    border-radius: 20px;
+    padding: 6px 16px;
+    font-size: 0.85rem;
+    color: var(--accent);
+    letter-spacing: 0.1em;
+    opacity: 0;
+    transition: opacity 0.3s;
+    pointer-events: none;
+  }
+  .distance-readout.visible { opacity: 1; }
+
+  /* Bottom controls */
+  .hud-bottom {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    padding: 24px 20px 40px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    background: linear-gradient(to top, rgba(0,0,0,0.7) 0%, transparent 100%);
+  }
+  .btn-lock {
+    width: 72px; height: 72px;
+    border-radius: 50%;
+    border: 2px solid var(--gold);
+    background: rgba(200,168,75,0.1);
+    color: var(--gold);
+    font-size: 1.5rem;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    display: flex; align-items: center; justify-content: center;
+    pointer-events: all;
+    backdrop-filter: blur(4px);
+  }
+  .btn-lock:active { transform: scale(0.93); background: rgba(200,168,75,0.3); }
+  .hud-hint {
+    font-size: 0.75rem;
+    letter-spacing: 0.15em;
+    color: var(--text-muted);
+    text-align: center;
+  }
+
+  /* Bow overlay (bottom of screen) */
+  .bow-svg {
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 140px;
+    pointer-events: none;
+    opacity: 0.85;
+    transition: transform 0.1s;
+  }
+
+  /* Pull indicator */
+  .pull-bar-container {
+    position: absolute;
+    right: 20px;
+    top: 50%; transform: translateY(-50%);
+    width: 8px; height: 160px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 4px;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .pull-bar-container.visible { opacity: 1; }
+  .pull-bar {
+    position: absolute;
+    bottom: 0; left: 0; right: 0;
+    background: linear-gradient(to top, var(--gold), var(--gold-light));
+    border-radius: 4px;
+    transition: height 0.05s;
+    height: 0%;
+  }
+
+  /* ── RESULT SCREEN ── */
+  #result-screen {
+    background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px);
+  }
+  .result-target-preview {
+    width: 140px; height: 140px;
+    border-radius: 50%;
+    border: 3px solid var(--gold);
+    margin-bottom: 24px;
+    position: relative;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .result-rings { position: absolute; inset: 0; }
+  .hit-marker {
+    position: absolute;
+    width: 12px; height: 12px;
+    background: var(--danger);
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    box-shadow: 0 0 8px var(--danger);
+  }
+  .result-score-big {
+    font-family: 'Cinzel', serif;
+    font-size: 4rem;
+    color: var(--gold);
+    line-height: 1;
+    text-shadow: 0 0 30px rgba(200,168,75,0.5);
+    animation: score-pop 0.4s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  }
+  @keyframes score-pop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+  .result-label { font-size: 0.8rem; letter-spacing: 0.3em; color: var(--text-muted); margin-bottom: 8px; margin-top: 4px; }
+  .result-accuracy { font-size: 1.1rem; color: var(--gold-light); margin-bottom: 4px; }
+  .result-stats {
+    display: flex; gap: 24px;
+    margin: 20px 0;
+    padding: 16px 24px;
+    border: 1px solid rgba(200,168,75,0.2);
+    border-radius: var(--radius);
+    background: rgba(200,168,75,0.05);
+  }
+  .stat { text-align: center; }
+  .stat-val { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--gold); }
+  .stat-key { font-size: 0.65rem; letter-spacing: 0.15em; color: var(--text-muted); margin-top: 2px; }
+
+  /* ── SCOREBOARD ── */
+  #scoreboard-screen { background: var(--dark); padding: 32px 24px; overflow-y: auto; justify-content: flex-start; }
+  .scoreboard-title {
+    font-family: 'Cinzel', serif;
+    font-size: 1.4rem;
+    color: var(--gold);
+    letter-spacing: 0.2em;
+    text-align: center;
+    margin-bottom: 24px;
+    padding-top: 16px;
+  }
+  .score-total {
+    font-family: 'Cinzel', serif;
+    font-size: 3rem;
+    color: var(--gold);
+    text-align: center;
+    margin-bottom: 4px;
+    text-shadow: 0 0 20px rgba(200,168,75,0.3);
+  }
+  .score-total-label { font-size: 0.7rem; letter-spacing: 0.3em; color: var(--text-muted); text-align: center; margin-bottom: 28px; }
+  .shot-list { width: 100%; max-width: 360px; display: flex; flex-direction: column; gap: 10px; margin-bottom: 28px; }
+  .shot-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    background: var(--dark3);
+    border-radius: var(--radius);
+    border-left: 3px solid var(--gold);
+  }
+  .shot-item.miss { border-left-color: var(--text-muted); opacity: 0.6; }
+  .shot-num { font-family: 'Cinzel', serif; font-size: 0.85rem; color: var(--text-muted); min-width: 28px; }
+  .shot-info { flex: 1; }
+  .shot-pts { font-family: 'Cinzel', serif; font-size: 1.3rem; color: var(--gold); }
+  .shot-detail { font-size: 0.7rem; color: var(--text-muted); margin-top: 2px; }
+  .shot-zone { font-size: 0.75rem; color: var(--gold-light); }
+
+  /* ── TUTORIAL ── */
+  #tutorial-screen { background: var(--dark2); padding: 32px 24px; }
+  .tutorial-step {
+    max-width: 320px;
+    text-align: center;
+  }
+  .tutorial-icon {
+    width: 80px; height: 80px;
+    border: 2px solid var(--gold);
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 24px;
+    font-size: 2rem;
+  }
+  .tutorial-title { font-family: 'Cinzel', serif; font-size: 1.2rem; color: var(--gold); margin-bottom: 12px; }
+  .tutorial-text { font-size: 0.85rem; line-height: 1.7; color: var(--text-muted); margin-bottom: 32px; }
+  .step-dots { display: flex; gap: 8px; margin-bottom: 28px; }
+  .step-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: background 0.3s; }
+  .step-dot.active { background: var(--gold); }
+
+  /* ── MODAL ── */
+  .modal-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.hidden { opacity: 0; pointer-events: none; }
+  .modal-box {
+    background: var(--dark3);
+    border: 1px solid var(--gold);
+    border-radius: 12px;
+    padding: 28px 24px;
+    max-width: 300px;
+    width: 90%;
+    text-align: center;
+  }
+  .modal-title { font-family: 'Cinzel', serif; font-size: 1.1rem; color: var(--gold); margin-bottom: 12px; }
+  .modal-text { font-size: 0.85rem; line-height: 1.6; color: var(--text-muted); margin-bottom: 20px; }
+
+  /* ── FLASH ── */
+  .score-flash {
+    position: absolute;
+    top: 40%; left: 50%;
+    transform: translate(-50%, -50%);
+    font-family: 'Cinzel', serif;
+    font-size: 2.5rem;
+    color: var(--gold);
+    text-shadow: 0 0 20px rgba(200,168,75,0.7);
+    pointer-events: none;
+    opacity: 0;
+    z-index: 50;
+  }
+  .score-flash.show {
+    animation: flash-up 1.2s ease-out forwards;
+  }
+  @keyframes flash-up {
+    0%  { opacity:1; transform:translate(-50%,-50%) scale(1); }
+    60% { opacity:1; transform:translate(-50%,-80%) scale(1.1); }
+    100%{ opacity:0; transform:translate(-50%,-120%) scale(0.9); }
+  }
+
+  /* ── VIBRATION helper ── */
+  .target-canvas-wrapper {
+    position: absolute; inset: 0; pointer-events: none;
+  }
+
+  /* ── GYRO PERMISSION ── */
+  .permission-btn {
+    margin-top: 16px;
+    padding: 12px 28px;
+    border: 1px solid var(--accent);
+    background: transparent;
+    color: var(--accent);
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    cursor: pointer;
+    letter-spacing: 0.1em;
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════
+     TITLE SCREEN
+═══════════════════════════════════════ -->
+<div id="title-screen" class="screen">
+  <div class="title-ring"><div class="title-dot"></div></div>
+  <h1>WEB ARCHERY</h1>
+  <p class="subtitle">AR EXPERIENCE</p>
+  <div class="btn-group">
+    <button class="btn primary" onclick="showScreen('mode-select')">PLAY</button>
+    <button class="btn" onclick="startTutorial()">チュートリアル</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     MODE SELECT
+═══════════════════════════════════════ -->
+<div id="mode-select" class="screen hidden">
+  <h1 style="font-size:1.6rem;margin-bottom:8px">MODE SELECT</h1>
+  <p class="subtitle" style="margin-bottom:40px">モードを選択</p>
+  <div class="btn-group">
+    <button class="btn primary" onclick="startGame(3)">
+      3射モード<br><span style="font-size:0.7rem;font-weight:300;opacity:0.7">アーケード — サクッと遊ぶ</span>
+    </button>
+    <button class="btn" onclick="startGame(9)">
+      9射モード<br><span style="font-size:0.7rem;font-weight:300;opacity:0.7">競技 — 3射×3セット</span>
+    </button>
+    <button class="btn small" style="margin-top:8px" onclick="showScreen('title-screen')">もどる</button>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     TUTORIAL
+═══════════════════════════════════════ -->
+<div id="tutorial-screen" class="screen hidden">
+  <div class="tutorial-step" id="tutorial-content"></div>
+  <div class="step-dots" id="step-dots"></div>
+  <button class="btn primary" id="tutorial-next-btn" onclick="tutorialNext()">次へ</button>
+  <button class="btn small danger" style="margin-top:12px" onclick="showScreen('title-screen')">スキップ</button>
+</div>
+
+<!-- ═══════════════════════════════════════
+     AR SCREEN
+═══════════════════════════════════════ -->
+<div id="ar-screen" class="screen hidden">
+  <video id="camera-video" autoplay playsinline muted></video>
+  <canvas id="ar-canvas"></canvas>
+
+  <div id="ui-overlay">
+    <!-- Crosshair -->
+    <div class="crosshair" id="crosshair">
+      <div class="crosshair-ring"></div>
+      <div class="crosshair-line-h left"></div>
+      <div class="crosshair-line-h right"></div>
+      <div class="crosshair-line-v top"></div>
+      <div class="crosshair-line-v bottom"></div>
+    </div>
+
+    <!-- Lock ring -->
+    <div class="lock-ring" id="lock-ring"></div>
+
+    <!-- HUD top -->
+    <div class="hud-top">
+      <div>
+        <div class="hud-score-label">SCORE</div>
+        <div class="hud-score" id="hud-score">0</div>
+      </div>
+      <div style="text-align:right">
+        <div class="hud-mode" id="hud-mode">3射モード</div>
+        <div class="hud-arrows" id="hud-arrows"></div>
+      </div>
+    </div>
+
+    <!-- Distance readout -->
+    <div class="distance-readout" id="dist-readout">距離: — cm</div>
+
+    <!-- Bow SVG (always visible) -->
+    <svg class="bow-svg" id="bow-svg" viewBox="0 0 100 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <!-- Bow limbs -->
+      <path d="M50 20 Q20 60 22 90 Q20 120 50 160" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+      <path d="M50 20 Q80 60 78 90 Q80 120 50 160" stroke="#c8a84b" stroke-width="4" stroke-linecap="round"/>
+      <!-- String (relaxed) -->
+      <line id="bow-string" x1="50" y1="20" x2="50" y2="160" stroke="#e8e4d8" stroke-width="1.2" opacity="0.6"/>
+      <!-- Arrow on bow -->
+      <line id="bow-arrow" x1="50" y1="45" x2="50" y2="155" stroke="#c8a84b" stroke-width="2.5" stroke-linecap="round" opacity="0" />
+      <!-- Arrow tip -->
+      <polygon id="bow-tip" points="50,38 46,50 54,50" fill="#c8a84b" opacity="0"/>
+      <!-- Grip -->
+      <rect x="44" y="82" width="12" height="16" rx="4" fill="#8a6020" />
+    </svg>
+
+    <!-- Pull bar -->
+    <div class="pull-bar-container" id="pull-bar-container">
+      <div class="pull-bar" id="pull-bar"></div>
+    </div>
+
+    <!-- Bottom controls -->
+    <div class="hud-bottom" id="hud-bottom">
+      <div class="hud-hint" id="hud-hint">照準を物体に合わせてください</div>
+      <button class="btn-lock" id="lock-btn" onclick="onLockBtn()">◎</button>
+    </div>
+
+    <!-- Score flash -->
+    <div class="score-flash" id="score-flash"></div>
+  </div>
+
+  <!-- Modal overlay (permission / miss etc) -->
+  <div class="modal-overlay hidden" id="modal-overlay">
+    <div class="modal-box">
+      <div class="modal-title" id="modal-title"></div>
+      <div class="modal-text"  id="modal-text"></div>
+      <button class="btn primary" id="modal-btn" onclick="onModalBtn()">OK</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════
+     RESULT (per shot)
+═══════════════════════════════════════ -->
+<div id="result-screen" class="screen hidden">
+  <canvas id="result-canvas" width="140" height="140" style="border-radius:50%;margin-bottom:24px;border:3px solid var(--gold)"></canvas>
+  <div class="result-label">SCORE</div>
+  <div class="result-score-big" id="result-score">0</div>
+  <div class="result-accuracy" id="result-accuracy">MISS</div>
+  <div class="result-stats">
+    <div class="stat"><div class="stat-val" id="stat-dist">—</div><div class="stat-key">距離 cm</div></div>
+    <div class="stat"><div class="stat-val" id="stat-area">—</div><div class="stat-key">面積 cm²</div></div>
+    <div class="stat"><div class="stat-val" id="stat-mult">×1</div><div class="stat-key">倍率</div></div>
+  </div>
+  <button class="btn primary" onclick="onNextShot()" id="next-btn">次の矢へ</button>
+</div>
+
+<!-- ═══════════════════════════════════════
+     SCOREBOARD
+═══════════════════════════════════════ -->
+<div id="scoreboard-screen" class="screen hidden">
+  <div class="scoreboard-title">FINAL SCORE</div>
+  <div class="score-total" id="final-total">0</div>
+  <div class="score-total-label">TOTAL POINTS</div>
+  <div class="shot-list" id="shot-list"></div>
+  <div style="display:flex;flex-direction:column;gap:12px;width:260px">
+    <button class="btn primary" onclick="startGame(window._gameMode)">もう一度</button>
+    <button class="btn" onclick="showScreen('mode-select')">モード選択へ</button>
+    <button class="btn small" onclick="showScreen('title-screen')">タイトルへ</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════════
+//  STATE
+// ══════════════════════════════════════════
+const STATE = {
+  TITLE: 'title',
+  AIM:   'aim',      // 照準・ターゲット選択
+  READY: 'ready',    // ターゲット確定、弓構え
+  PULL:  'pull',     // 引き絞り中
+  FLY:   'fly',      // 矢が飛んでいる
+  HIT:   'hit',      // 結果表示
+};
+
+let state       = STATE.TITLE;
+let gameMode    = 3;      // 3 or 9
+let arrowsLeft  = 3;
+let totalScore  = 0;
+let shotLog     = [];
+let currentTarget = null; // { x, y, radius, distance, area }
+let pullStrength  = 0;    // 0–1
+let pullStartY    = null;
+let gyroSmooth    = { alpha: 0, beta: 0, gamma: 0 };
+let prevObjects   = [];   // 前の的の残骸用
+let isTryShot     = false;
+
+window._gameMode = 3;
+
+// ══════════════════════════════════════════
+//  SCREEN TRANSITIONS
+// ══════════════════════════════════════════
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(id).classList.remove('hidden');
+}
+
+// ══════════════════════════════════════════
+//  TUTORIAL
+// ══════════════════════════════════════════
+const TUTORIAL_STEPS = [
+  { icon: '◎', title: 'ターゲットを選ぼう', text: 'スマホを動かして照準を物体に合わせ、「◎」ボタンを押すと的が出現します。' },
+  { icon: '🏹', title: '弓を引き絞ろう', text: '的が出たら画面を下にスワイプ。強く引くほど矢が遠くまで飛びます。' },
+  { icon: '↑', title: 'ジャイロで狙う', text: 'スマホの傾きで発射角度が決まります。的に向けてから指を離しましょう。' },
+  { icon: '★', title: 'スコアを稼ごう', text: '的の中心に当てるほど高得点！遠くて小さな的ほど倍率も上がります。' },
+];
+let tutStep = 0;
+function startTutorial() {
+  tutStep = 0;
+  showScreen('tutorial-screen');
+  renderTutStep();
+}
+function renderTutStep() {
+  const s = TUTORIAL_STEPS[tutStep];
+  document.getElementById('tutorial-content').innerHTML = `
+    <div class="tutorial-icon">${s.icon}</div>
+    <div class="tutorial-title">${s.title}</div>
+    <div class="tutorial-text">${s.text}</div>
+  `;
+  const dots = document.getElementById('step-dots');
+  dots.innerHTML = TUTORIAL_STEPS.map((_, i) =>
+    `<div class="step-dot ${i===tutStep?'active':''}"></div>`).join('');
+  document.getElementById('tutorial-next-btn').textContent =
+    tutStep === TUTORIAL_STEPS.length - 1 ? 'はじめる' : '次へ';
+}
+function tutorialNext() {
+  if (tutStep < TUTORIAL_STEPS.length - 1) { tutStep++; renderTutStep(); }
+  else showScreen('mode-select');
+}
+
+// ══════════════════════════════════════════
+//  GAME START
+// ══════════════════════════════════════════
+async function startGame(mode) {
+  gameMode = mode;
+  window._gameMode = mode;
+  arrowsLeft = mode;
+  totalScore = 0;
+  shotLog = [];
+  isTryShot = false;
+  currentTarget = null;
+
+  showScreen('ar-screen');
+  updateHUD();
+
+  // カメラ起動
+  await startCamera();
+  // ジャイロ許可
+  await requestGyro();
+  // 試し撃ち案内
+  showModal('試し撃ち', `本番前に1回だけ試し撃ちできます。\nまずは的の感覚を掴んでください。`, '試し撃ち開始', () => {
+    isTryShot = true;
+    enterAimState();
+  });
+}
+
+// ══════════════════════════════════════════
+//  CAMERA
+// ══════════════════════════════════════════
+async function startCamera() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({
+      video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+    });
+    const video = document.getElementById('camera-video');
+    video.srcObject = stream;
+    await new Promise(r => video.onloadedmetadata = r);
+    video.play();
+    resizeCanvas();
+  } catch(e) {
+    showModal('カメラエラー', 'カメラへのアクセスを許可してください。', 'OK', () => showScreen('title-screen'));
+  }
+}
+
+function resizeCanvas() {
+  const c = document.getElementById('ar-canvas');
+  c.width  = window.innerWidth;
+  c.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+
+// ══════════════════════════════════════════
+//  GYRO
+// ══════════════════════════════════════════
+async function requestGyro() {
+  if (typeof DeviceOrientationEvent !== 'undefined' &&
+      typeof DeviceOrientationEvent.requestPermission === 'function') {
+    try {
+      const perm = await DeviceOrientationEvent.requestPermission();
+      if (perm !== 'granted') return;
+    } catch(e) {}
+  }
+  window.addEventListener('deviceorientation', onGyro);
+}
+
+function onGyro(e) {
+  const t = 0.12;
+  gyroSmooth.alpha += ((e.alpha||0) - gyroSmooth.alpha) * t;
+  gyroSmooth.beta  += ((e.beta ||0) - gyroSmooth.beta)  * t;
+  gyroSmooth.gamma += ((e.gamma||0) - gyroSmooth.gamma) * t;
+}
+
+// ══════════════════════════════════════════
+//  RAYCAST SIMULATION
+//  (WebXR Hit Test の代替: 画面中央からの
+//   擬似距離計算。実機では depth sensor 利用)
+// ══════════════════════════════════════════
+function estimateDistance() {
+  // ジャイロの beta（前後傾き）から擬似距離を算出
+  // 水平に近い(beta≈0) → 遠い, 下向き(beta大) → 近い
+  const beta = Math.abs(gyroSmooth.beta);
+  const baseDist = 300; // cm
+  const dist = Math.max(30, baseDist - beta * 2.5 + Math.random() * 20 - 10);
+  return Math.round(dist);
+}
+
+function estimateArea(dist) {
+  // 距離に応じた擬似的な物体面積
+  // 近い → 大きな物体が視野に入りやすい
+  const base = 4000 / (dist * 0.5);
+  return Math.round(Math.max(20, Math.min(2000, base + Math.random() * 200 - 100)));
+}
+
+// ══════════════════════════════════════════
+//  AIM STATE  (ターゲット探し)
+// ══════════════════════════════════════════
+let aimAnimId = null;
+
+function enterAimState() {
+  state = STATE.AIM;
+  document.getElementById('hud-hint').textContent = '照準を物体に合わせてください';
+  document.getElementById('lock-btn').textContent = '◎';
+  document.getElementById('lock-btn').style.borderColor = 'var(--gold)';
+  document.getElementById('lock-btn').style.color = 'var(--gold)';
+  document.getElementById('hud-bottom').style.pointerEvents = 'all';
+  document.getElementById('pull-bar-container').classList.remove('visible');
+  document.getElementById('bow-arrow').setAttribute('opacity', '0');
+  document.getElementById('bow-tip').setAttribute('opacity', '0');
+
+  if (aimAnimId) cancelAnimationFrame(aimAnimId);
+  aimLoop();
+}
+
+function aimLoop() {
+  if (state !== STATE.AIM) return;
+
+  const dist = estimateDistance();
+  const area = estimateArea(dist);
+  const radius = Math.sqrt(area / Math.PI); // cm → pixel映像上の半径(比例)
+  const screenRadius = Math.min(120, Math.max(20, radius * 0.5));
+
+  // ロックリング表示
+  const lockRing = document.getElementById('lock-ring');
+  lockRing.classList.add('visible');
+  lockRing.style.width  = (screenRadius * 2 + 40) + 'px';
+  lockRing.style.height = (screenRadius * 2 + 40) + 'px';
+
+  // 距離表示
+  const dr = document.getElementById('dist-readout');
+  dr.classList.add('visible');
+  dr.textContent = `距離: ${dist} cm｜面積: ${area} cm²`;
+
+  // 仮のターゲット情報を保持
+  window._aimTarget = { dist, area, radius: screenRadius };
+
+  aimAnimId = requestAnimationFrame(aimLoop);
+}
+
+// ══════════════════════════════════════════
+//  LOCK (ターゲット確定)
+// ══════════════════════════════════════════
+function onLockBtn() {
+  if (state === STATE.AIM) {
+    lockTarget();
+  } else if (state === STATE.READY) {
+    // already locked — do nothing (touch to pull)
+  }
+}
+
+function lockTarget() {
+  if (aimAnimId) cancelAnimationFrame(aimAnimId);
+  state = STATE.READY;
+
+  const { dist, area, radius } = window._aimTarget;
+  currentTarget = {
+    x: window.innerWidth  / 2,
+    y: window.innerHeight / 2 - 80,
+    radius,
+    distance: dist,
+    area,
+  };
+
+  // 的を描画
+  drawTarget(currentTarget);
+
+  document.getElementById('lock-ring').classList.remove('visible');
+  document.getElementById('dist-readout').classList.remove('visible');
+  document.getElementById('bow-arrow').setAttribute('opacity', '1');
+  document.getElementById('bow-tip').setAttribute('opacity', '1');
+  document.getElementById('hud-hint').textContent = '画面を下にスワイプして引き絞る';
+
+  // タッチイベント登録
+  document.getElementById('ar-screen').addEventListener('touchstart', onTouchStart, { passive: false });
+  document.getElementById('ar-screen').addEventListener('touchmove',  onTouchMove,  { passive: false });
+  document.getElementById('ar-screen').addEventListener('touchend',   onTouchEnd,   { passive: false });
+}
+
+// ══════════════════════════════════════════
+//  TARGET DRAWING
+// ══════════════════════════════════════════
+function drawTarget(t, alpha = 1) {
+  const canvas = document.getElementById('ar-canvas');
+  const ctx = canvas.getContext('2d');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // 前の的の残骸（半透明で残す）
+  prevObjects.forEach(p => drawGhostTarget(ctx, p));
+
+  // 現在の的
+  if (!t) return;
+  const rings = [
+    { r: t.radius,       color: '#fff' },
+    { r: t.radius*0.8,   color: '#000' },
+    { r: t.radius*0.6,   color: '#4a9eff' },
+    { r: t.radius*0.4,   color: '#ff4a4a' },
+    { r: t.radius*0.2,   color: '#ffdd00' },
+  ];
+  rings.forEach(ring => {
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, ring.r, 0, Math.PI*2);
+    ctx.fillStyle = ring.color;
+    ctx.globalAlpha = alpha;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+  ctx.globalAlpha = 1;
+
+  // 十字線
+  ctx.beginPath();
+  ctx.moveTo(t.x - t.radius, t.y);
+  ctx.lineTo(t.x + t.radius, t.y);
+  ctx.moveTo(t.x, t.y - t.radius);
+  ctx.lineTo(t.x, t.y + t.radius);
+  ctx.strokeStyle = 'rgba(0,0,0,0.4)';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+}
+
+function drawGhostTarget(ctx, t) {
+  const rings = [
+    { r: t.radius,     color: '#fff' },
+    { r: t.radius*0.8, color: '#000' },
+    { r: t.radius*0.6, color: '#4a9eff' },
+    { r: t.radius*0.4, color: '#ff4a4a' },
+    { r: t.radius*0.2, color: '#ffdd00' },
+  ];
+  rings.forEach(ring => {
+    ctx.beginPath();
+    ctx.arc(t.x, t.y, ring.r, 0, Math.PI*2);
+    ctx.fillStyle = ring.color;
+    ctx.globalAlpha = 0.25;
+    ctx.fill();
+  });
+
+  // 矢のマーク（前の的に刺さった矢）
+  if (t.arrowHit) {
+    ctx.globalAlpha = 0.6;
+    ctx.beginPath();
+    ctx.arc(t.arrowHit.x, t.arrowHit.y, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#c8a84b';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(t.arrowHit.x, t.arrowHit.y);
+    ctx.lineTo(t.arrowHit.x, t.arrowHit.y + 30);
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ══════════════════════════════════════════
+//  PULL (弓を引く)
+// ══════════════════════════════════════════
+function onTouchStart(e) {
+  if (state !== STATE.READY) return;
+  e.preventDefault();
+  state = STATE.PULL;
+  pullStartY = e.touches[0].clientY;
+  pullStrength = 0;
+  document.getElementById('pull-bar-container').classList.add('visible');
+  document.getElementById('hud-hint').textContent = '指を離して放つ！';
+  if (navigator.vibrate) navigator.vibrate(30);
+}
+
+function onTouchMove(e) {
+  if (state !== STATE.PULL) return;
+  e.preventDefault();
+  const dy = pullStartY - e.touches[0].clientY;
+  pullStrength = Math.min(1, Math.max(0, dy / 200));
+  document.getElementById('pull-bar').style.height = (pullStrength * 100) + '%';
+
+  // 弦のたわみアニメーション
+  const sx = 50 + pullStrength * 15;
+  document.getElementById('bow-string').setAttribute('x1', sx);
+  document.getElementById('bow-string').setAttribute('x2', sx);
+  document.getElementById('bow-arrow').setAttribute('x1', sx - 0.5);
+  document.getElementById('bow-arrow').setAttribute('x2', sx - 0.5);
+  document.getElementById('bow-tip').setAttribute('transform', `translate(${sx-50},0)`);
+
+  // バイブ強度フィードバック
+  if (pullStrength > 0.9 && navigator.vibrate) navigator.vibrate([10, 20, 10]);
+}
+
+function onTouchEnd(e) {
+  if (state !== STATE.PULL) return;
+  e.preventDefault();
+  releaseArrow();
+}
+
+// ══════════════════════════════════════════
+//  RELEASE & FLY
+// ══════════════════════════════════════════
+function releaseArrow() {
+  state = STATE.FLY;
+  document.getElementById('pull-bar-container').classList.remove('visible');
+  document.getElementById('hud-bottom').style.pointerEvents = 'none';
+
+  // 弦を戻す
+  document.getElementById('bow-string').setAttribute('x1', '50');
+  document.getElementById('bow-string').setAttribute('x2', '50');
+  document.getElementById('bow-arrow').setAttribute('opacity', '0');
+  document.getElementById('bow-tip').setAttribute('opacity', '0');
+  document.getElementById('bow-tip').removeAttribute('transform');
+
+  // 飛行計算
+  if (navigator.vibrate) navigator.vibrate(50);
+
+  // pullStrength が低すぎると的に届かない（ミス）
+  const minPull = 0.2;
+  if (pullStrength < minPull) {
+    // 矢が落ちた
+    setTimeout(() => resolveShot(null), 600);
+    return;
+  }
+
+  // 命中点計算（ジャイロ誤差＋引き強度を加味）
+  const t = currentTarget;
+  const jitter = (1 - pullStrength) * t.radius * 1.5;
+  const bx = (Math.random() - 0.5) * jitter * 2;
+  const by = (Math.random() - 0.5) * jitter * 2;
+  const hitX = t.x + bx;
+  const hitY = t.y + by;
+  const dist = Math.sqrt(bx*bx + by*by);
+
+  // 矢の飛行アニメーション（canvasに矢を描く）
+  animateArrow(hitX, hitY, () => {
+    resolveShot({ x: hitX, y: hitY, distFromCenter: dist });
+  });
+}
+
+function animateArrow(hitX, hitY, cb) {
+  const canvas = document.getElementById('ar-canvas');
+  const ctx = canvas.getContext('2d');
+  const startX = canvas.width / 2;
+  const startY = canvas.height - 100;
+  let progress = 0;
+
+  function frame() {
+    progress += 0.06;
+    if (progress >= 1) { cb(); return; }
+    drawTarget(currentTarget);
+    // 矢の軌跡
+    const ax = startX + (hitX - startX) * progress;
+    const ay = startY + (hitY - startY) * progress - Math.sin(progress * Math.PI) * 60;
+    ctx.beginPath();
+    ctx.arc(ax, ay, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#c8a84b';
+    ctx.globalAlpha = 0.9;
+    ctx.fill();
+    ctx.globalAlpha = 1;
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+// ══════════════════════════════════════════
+//  RESOLVE SHOT (スコア計算)
+// ══════════════════════════════════════════
+function resolveShot(hit) {
+  state = STATE.HIT;
+
+  // タッチイベント解除
+  ['touchstart','touchmove','touchend'].forEach(ev => {
+    document.getElementById('ar-screen').removeEventListener(ev, window['on'+ev.charAt(0).toUpperCase()+ev.slice(1)]);
+  });
+
+  const t = currentTarget;
+
+  let score = 0;
+  let zone  = 'MISS';
+  let arrowHitPos = null;
+
+  if (hit) {
+    const ratio = hit.distFromCenter / t.radius;
+    let zoneScore;
+    if      (ratio < 0.2) { zone = 'BULL\'S EYE'; zoneScore = 10; }
+    else if (ratio < 0.4) { zone = 'GOLD';         zoneScore = 8; }
+    else if (ratio < 0.6) { zone = 'RED';           zoneScore = 6; }
+    else if (ratio < 0.8) { zone = 'BLUE';          zoneScore = 4; }
+    else if (ratio < 1.0) { zone = 'WHITE';         zoneScore = 2; }
+    else                  { zone = 'MISS';           zoneScore = 0; }
+
+    if (zoneScore > 0) {
+      const multiplier = Math.round((t.distance / Math.sqrt(t.area)) * 10) / 10;
+      score = Math.round(zoneScore * multiplier * 100);
+      arrowHitPos = { x: hit.x, y: hit.y };
+    }
+  }
+
+  // 前の的を保存
+  if (currentTarget) {
+    prevObjects = [{ ...currentTarget, arrowHit: arrowHitPos }];
+  }
+
+  // スコアフラッシュ
+  if (score > 0) {
+    const flash = document.getElementById('score-flash');
+    flash.textContent = '+' + score;
+    flash.classList.remove('show');
+    void flash.offsetWidth;
+    flash.classList.add('show');
+    if (navigator.vibrate) navigator.vibrate([40, 20, 80]);
+  }
+
+  // 試し撃ちなら記録しない
+  if (isTryShot) {
+    isTryShot = false;
+    setTimeout(() => {
+      showModal('試し撃ち完了', `感覚は掴めましたか？\nここから本番スタートです！`, '本番開始', () => {
+        arrowsLeft = gameMode;
+        updateHUD();
+        enterAimState();
+      });
+    }, 800);
+    drawTarget(currentTarget);
+    return;
+  }
+
+  totalScore += score;
+  arrowsLeft--;
+  shotLog.push({ score, zone, dist: t.distance, area: t.area });
+  updateHUD();
+
+  // リザルト画面へ
+  setTimeout(() => showResult(score, zone, hit, t), 600);
+}
+
+// ══════════════════════════════════════════
+//  RESULT SCREEN
+// ══════════════════════════════════════════
+function showResult(score, zone, hit, target) {
+  showScreen('result-screen');
+
+  // 的の小プレビューを描画
+  const canvas = document.getElementById('result-canvas');
+  const ctx = canvas.getContext('2d');
+  const cx = 70, cy = 70, r = 55;
+  const rings = [
+    { r: r,     color: '#fff' },
+    { r: r*0.8, color: '#000' },
+    { r: r*0.6, color: '#4a9eff' },
+    { r: r*0.4, color: '#ff4a4a' },
+    { r: r*0.2, color: '#ffdd00' },
+  ];
+  ctx.clearRect(0,0,140,140);
+  rings.forEach(ring => {
+    ctx.beginPath();
+    ctx.arc(cx, cy, ring.r, 0, Math.PI*2);
+    ctx.fillStyle = ring.color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 0.5;
+    ctx.stroke();
+  });
+
+  // 命中点
+  if (hit && score > 0) {
+    const ratio = hit.distFromCenter / target.radius;
+    const px = cx + (hit.x - target.x) / target.radius * r;
+    const py = cy + (hit.y - target.y) / target.radius * r;
+    ctx.beginPath();
+    ctx.arc(px, py, 5, 0, Math.PI*2);
+    ctx.fillStyle = '#c8a84b';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(px-8, py); ctx.lineTo(px+8, py);
+    ctx.moveTo(px, py-8); ctx.lineTo(px, py+8);
+    ctx.strokeStyle = '#c8a84b';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+  }
+
+  document.getElementById('result-score').textContent = score;
+  document.getElementById('result-accuracy').textContent = zone;
+
+  const mult = Math.round((target.distance / Math.sqrt(target.area)) * 10) / 10;
+  document.getElementById('stat-dist').textContent = target.distance;
+  document.getElementById('stat-area').textContent = target.area;
+  document.getElementById('stat-mult').textContent = '×' + mult;
+
+  document.getElementById('next-btn').textContent =
+    arrowsLeft > 0 ? '次の矢へ →' : '結果を見る';
+}
+
+function onNextShot() {
+  if (arrowsLeft > 0) {
+    showScreen('ar-screen');
+    drawTarget(null); // 残骸だけ表示
+    drawTarget(prevObjects[0]); // ゴースト描画
+    enterAimState();
+  } else {
+    showScoreboard();
+  }
+}
+
+// ══════════════════════════════════════════
+//  SCOREBOARD
+// ══════════════════════════════════════════
+function showScoreboard() {
+  showScreen('scoreboard-screen');
+  document.getElementById('final-total').textContent = totalScore;
+
+  const list = document.getElementById('shot-list');
+  list.innerHTML = shotLog.map((s, i) => `
+    <div class="shot-item ${s.score===0?'miss':''}">
+      <div class="shot-num">#${i+1}</div>
+      <div class="shot-info">
+        <div class="shot-zone">${s.zone}</div>
+        <div class="shot-detail">${s.dist}cm ／ ${s.area}cm²</div>
+      </div>
+      <div class="shot-pts">${s.score}pt</div>
+    </div>
+  `).join('');
+}
+
+// ══════════════════════════════════════════
+//  HUD UPDATE
+// ══════════════════════════════════════════
+function updateHUD() {
+  document.getElementById('hud-score').textContent = totalScore;
+  document.getElementById('hud-mode').textContent = gameMode + '射モード';
+  const arrows = document.getElementById('hud-arrows');
+  arrows.innerHTML = Array.from({length: gameMode}, (_, i) =>
+    `<div class="arrow-pip ${i >= arrowsLeft ? 'used' : ''}"></div>`
+  ).join('');
+}
+
+// ══════════════════════════════════════════
+//  MODAL
+// ══════════════════════════════════════════
+let _modalCb = null;
+function showModal(title, text, btnLabel, cb) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-text').textContent  = text;
+  document.getElementById('modal-btn').textContent   = btnLabel || 'OK';
+  _modalCb = cb;
+  document.getElementById('modal-overlay').classList.remove('hidden');
+}
+function onModalBtn() {
+  document.getElementById('modal-overlay').classList.add('hidden');
+  if (_modalCb) { _modalCb(); _modalCb = null; }
+}
+</script>
+</body>
+</html>
