@@ -430,7 +430,7 @@
         title: "🌸 お花シリーズ",
         models: [
           { name: 'flower', label: 'お花 🌸' },
-          { name: 'ohana',  label: 'デジタル生け花' },
+          { name: '3500',  label: '青いお花' },
           { name: '6667',    label: 'ひまわり' }
         ]
       },
@@ -438,6 +438,7 @@
         title: "🎈 その他",
         models: [
           { name: 'Balloon', label: '風船' },
+          { name: 'ohana',  label: 'デジタル生け花' },
           { name: 'untitled', label: 'フォトスペース' }
         ]
       }
@@ -571,7 +572,7 @@
         // お花とデジタル生け花：サイズを1/3（33.3%）、横に180度回転
         arViewer.setAttribute('scale', '0.333 0.333 0.333');
         arViewer.setAttribute('orientation', '0deg 180deg 0deg');
-      } else if (modelName === '6667') {
+      } else if (modelName === '6667' || modelName === '3500') {
         // m84：横に180度回転のみ（サイズはそのまま1倍）
         arViewer.setAttribute('scale', '1 1 1');
         arViewer.setAttribute('orientation', '30deg 180deg 0deg'); 
