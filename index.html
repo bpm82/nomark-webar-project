@@ -383,7 +383,6 @@
     <h1>モデルを選ぶ</h1>
     <p class="subtitle" id="model-screen-subtitle">モデルを選んでください</p>
 
-    <!-- 【修正】機能1のためにクラスを外してidのみにしました -->
     <div id="model-buttons-container"></div>
 
     <button class="back-btn" onclick="goTo('mode-screen')">← 戻る</button>
@@ -432,7 +431,7 @@
         models: [
           { name: 'flower', label: 'お花 🌸' },
           { name: 'ohana',  label: 'デジタル生け花' },
-          { name: 'm84',    label: 'm84' }
+          { name: 'm84',    label: 'ひまわり' }
         ]
       },
       {
@@ -566,11 +565,19 @@
       arViewer.src = modelPath;
 
       // ==========================================
-      // 🌟 機能2: m84モデルだけ裏表を反対（180度回転）にする 🌟
+      // 🌟 機能2: モデルごとの個別調整（サイズ・向き） 🌟
       // ==========================================
-      if (modelName === 'm84') {
+      if (modelName === 'flower' || modelName === 'ohana') {
+        // お花とデジタル生け花：サイズを1/3（33.3%）、横に180度回転
+        arViewer.setAttribute('scale', '0.333 0.333 0.333');
+        arViewer.setAttribute('orientation', '0deg 180deg 0deg');
+      } else if (modelName === 'm84') {
+        // m84：横に180度回転のみ（サイズはそのまま1倍）
+        arViewer.setAttribute('scale', '1 1 1');
         arViewer.setAttribute('orientation', '0deg 180deg 0deg'); 
       } else {
+        // その他：サイズそのまま、回転なし
+        arViewer.setAttribute('scale', '1 1 1');
         arViewer.setAttribute('orientation', '0deg 0deg 0deg'); 
       }
       // ==========================================
