@@ -528,13 +528,9 @@
         console.log(`✅ 「${modelName}」読み込み完了（モード: ${currentMode}）`);
         cleanup();
 
-        // ARモードの時だけ起動ボタンを表示（index_6と同じ堅牢なチェック）
+        // ARモードの時はボタンを表示（実際のAR可否はボタンを押した時にチェック）
         if (currentMode === 'ar') {
-          if (arViewer.canActivateAR) {
-            arLaunchBtn.style.display = 'block';
-          } else {
-            showError('📵 このデバイスはARに対応していません。3Dビューアーとして表示します。');
-          }
+          arLaunchBtn.style.display = 'block';
         }
       };
 
