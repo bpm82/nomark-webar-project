@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WebAR プロジェクト</title>
   
-  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js"></script>
 
   <style>
     /* ===== リセット ===== */
@@ -379,7 +379,8 @@
   <div id="error-message"></div>
 
   <script type="module">
-    import 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
+    // 【手術箇所 2】 モジュール内のインポートも安定版(3.4.0)に差し替え
+    import 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
 
     // ==========================================================
     // 🛠️ 【設定エリア】
@@ -546,17 +547,20 @@
       arViewer.addEventListener('error', onError);
     }
 
+    // 【手術箇所 3】 ファイル6の堅牢なAR起動処理へ完全置換
     window.launchAR = async function() {
-      if (arViewer.canActivateAR) {
-        arLaunchBtn.style.display = 'none';
-        try {
+      arLaunchBtn.style.display = 'none';
+      try {
+        if (arViewer.canActivateAR) {
           await arViewer.activateAR();
-        } catch (e) {
-          showError('AR起動に失敗しました');
+        } else {
+          showError('ARが利用できません');
           arLaunchBtn.style.display = 'block';
         }
-      } else {
-        showError('📵 この端末ではARが起動できません。スマホで開いてください！');
+      } catch (e) {
+        console.error(e);
+        showError('AR起動に失敗しました');
+        arLaunchBtn.style.display = 'block';
       }
     };
 
