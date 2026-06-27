@@ -4,6 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <title>WebAR プロジェクト</title>
+  
+  <script type="module" src="https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js"></script>
+
   <style>
     /* ===== リセット ===== */
     * {
@@ -16,7 +19,7 @@
     html, body {
       width: 100%;
       height: 100%;
-      overflow: hidden;
+      overflow: hidden; /* ページ全体の「紙」自体がずれるのは禁止 */
       margin: 0;
       padding: 0;
       font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
@@ -199,10 +202,16 @@
 
     .model-btn-personal {
       width: 100%;
+      grid-column: 1 / -1;
       background: linear-gradient(135deg, #FF2D87, #FF8DC7);
       color: #fff;
       box-shadow: 0 4px 16px rgba(255, 45, 135, 0.3);
       margin-bottom: 10px;
+    }
+
+    .model-btn-personal:active {
+      transform: scale(0.96);
+      background: linear-gradient(135deg, #e0206e, #f07daf);
     }
 
     /* ===== スクリーン3：ビューアー ===== */
@@ -255,6 +264,10 @@
       transition: background 0.15s ease;
     }
 
+    .viewer-back-btn:active {
+      background: rgba(255,255,255,0.3);
+    }
+
     #ar-launch-btn {
       position: absolute;
       bottom: 100px;
@@ -270,7 +283,15 @@
       font-weight: 800;
       cursor: pointer;
       box-shadow: 0 8px 28px rgba(255, 45, 85, 0.5);
-      display: none;
+      display: none; /* 最初は隠しておいて、JSで表示をコントロール */
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    #ar-launch-btn:active {
+      transform: translateX(-50%) scale(0.96);
+      box-shadow: 0 4px 14px rgba(255, 45, 85, 0.3);
     }
 
     /* ===== ローディング・エラー ===== */
@@ -300,6 +321,8 @@
       margin: 0 auto 16px;
     }
     @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* エラーメッセージ（スマホへの誘導用） */
     #error-message {
       position: fixed;
       bottom: 40px;
@@ -309,8 +332,13 @@
       color: #fff;
       padding: 14px 24px;
       border-radius: 16px;
-      display: none;
+      font-size: 14px;
+      font-weight: 600;
+      max-width: 88vw;
+      text-align: center;
       z-index: 300;
+      display: none;
+      box-shadow: 0 8px 24px rgba(255,59,48,0.3);
     }
   </style>
 </head>
@@ -352,6 +380,7 @@
       <span id="viewer-model-label">---</span>
     </div>
     <button class="viewer-ui viewer-back-btn" onclick="backFromViewer()">✕ 戻る</button>
+    
     <model-viewer
       id="ar-viewer"
       src=""
@@ -363,6 +392,7 @@
       shadow-intensity="1"
       exposure="1">
     </model-viewer>
+    
     <button id="ar-launch-btn" onclick="launchAR()">📷 ARカメラを起動する</button>
   </div>
 
@@ -376,45 +406,31 @@
   <div id="error-message"></div>
 
   <script type="module">
-    import 'https://unpkg.com/@google/model-viewer/dist/model-viewer.min.js';
-
     // ==========================================================
-    // 🛠️ 【設定エリア】ここを書き換えるだけで自由に編集できます！🛠️
+    // 🛠️ 【設定エリア】
+    // m84モデルをしっかり追加しています！
     // ==========================================================
     const MODEL_SETTINGS = [
       {
-        title: "🌸 お花シリーズ",  // ←見出しの名前
+        title: "🌸 お花シリーズ",
         models: [
-          { name: 'flower', label: 'お花 🌸' },          // ←モデル名（.glb）とボタンの文字
+          { name: 'flower', label: 'お花 🌸' },
           { name: 'ohana',  label: 'デジタル生け花' },
-          { name: 'm84',  label: 'm84' }
+          { name: 'm84',    label: 'm84' } // ← 追加しました！
         ]
       },
       {
-        title: "🎈 その他",       // ←見出しの名前
+        title: "🎈 その他",
         models: [
           { name: 'Balloon', label: '風船' },
           { name: 'untitled', label: 'フォトスペース' }
         ]
       }
-      // もし新しく「動物」という見出しとモデルを追加したい場合は、
-      // 上のカンマの後ろに、以下のように追加するだけでOKです！
-      // ,{
-      //   title: "🐶 動物",
-      //   models: [
-      //     { name: 'dog', label: '犬' },
-      //     { name: 'cat', label: '猫' }
-      //   ]
-      // }
     ];
     // ==========================================================
 
-    // ※ ここから下はプログラムが自動で処理するので触らなくてOKです！
-
-    // 設定エリアのデータから、プログラム用のモデル一覧を自動作成
     const MODELS = MODEL_SETTINGS.flatMap(group => group.models);
 
-    // ===== DOM =====
     const modeScreen     = document.getElementById('mode-screen');
     const modelScreen    = document.getElementById('model-screen');
     const viewerScreen   = document.getElementById('viewer-screen');
@@ -460,7 +476,6 @@
       }
     };
 
-    // ===== 設定エリアのデータをもとにボタンを自動生成 =====
     function renderModelButtons() {
       modelContainer.innerHTML = '';
 
@@ -472,19 +487,15 @@
         modelContainer.appendChild(btn);
       }
 
-      // MODEL_SETTINGS の通りに見出しとボタンを順番に作っていく
       MODEL_SETTINGS.forEach(group => {
-        // 見出し（h3）を作る
         const titleEl = document.createElement('h3');
         titleEl.className = 'category-title';
         titleEl.textContent = group.title;
         modelContainer.appendChild(titleEl);
 
-        // ボタンを2列に並べるための箱（div）を作る
         const gridEl = document.createElement('div');
         gridEl.className = 'model-grid';
         
-        // その見出しの中のモデルをボタンにして箱に入れる
         group.models.forEach(model => {
           const btn = document.createElement('button');
           btn.className   = 'model-btn';
@@ -493,7 +504,6 @@
           gridEl.appendChild(btn);
         });
         
-        // 完成した箱を画面に配置する
         modelContainer.appendChild(gridEl);
       });
     }
@@ -528,7 +538,8 @@
       const onLoad = () => {
         showLoading(false);
         cleanup();
-        if (currentMode === 'ar' && arViewer.canActivateAR) {
+        // ★ パソコンでもスマホでも「ARモード」を選んでいたら絶対にボタンを表示する！
+        if (currentMode === 'ar') {
           arLaunchBtn.style.display = 'block';
         }
       };
@@ -550,17 +561,19 @@
     }
 
     window.launchAR = async function() {
-      arLaunchBtn.style.display = 'none';
-      try {
-        if (arViewer.canActivateAR) {
+      // 端末が本当にARを起動できるかチェック
+      if (arViewer.canActivateAR) {
+        arLaunchBtn.style.display = 'none';
+        try {
           await arViewer.activateAR();
-        } else {
-          showError('ARが利用できません');
+        } catch (e) {
+          console.error(e);
+          showError('AR起動に失敗しました');
           arLaunchBtn.style.display = 'block';
         }
-      } catch (e) {
-        showError('AR起動に失敗しました');
-        arLaunchBtn.style.display = 'block';
+      } else {
+        // パソコンなど、非対応端末でボタンを押した場合
+        showError('📵 この端末ではARが起動できません。スマホで開いてください！');
       }
     };
 
