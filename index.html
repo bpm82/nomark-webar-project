@@ -386,6 +386,7 @@
       { name: 'Balloon', label: '風船' },
       { name: 'ohana',  label: 'デジタル生け花' },
       { name: 'untitled', label: 'フォトスペース' }
+      { name: 'm84', label: 'm84' },
     ];
 
     // ===== DOM =====
@@ -457,6 +458,7 @@
       
       const flowerModel = MODELS.find(m => m.name === 'flower');
       const ohanaModel = MODELS.find(m => m.name === 'ohana');
+      const m84Model = MODELS.find(m => m.name === 'm84');
       
       if (flowerModel) {
         const btn1 = document.createElement('button');
@@ -471,6 +473,13 @@
         btn2.textContent = ohanaModel.label;
         btn2.onclick = () => loadModel(ohanaModel.name);
         grid1.appendChild(btn2);
+      }
+       if (m84) {
+        const btn3 = document.createElement('button');
+        btn3.className = 'model-btn';
+        btn3.textContent = ohanaModel.label;
+        btn3.onclick = () => loadModel(m84.name);
+        grid1.appendChild(btn3);
       }
       modelContainer.appendChild(grid1);
 
