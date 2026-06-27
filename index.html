@@ -566,7 +566,7 @@
       arViewer.removeAttribute('ios-src'); // model-viewerの自動USDZ変換を使う
       arViewer.src = modelPath;
 
-      // ==========================================
+     // ==========================================
       // 🌟 機能2: モデルごとの個別調整（サイズ・向き） 🌟
       // ==========================================
       if (modelName === 'flower' || modelName === 'ohana') {
@@ -574,21 +574,19 @@
         arViewer.setAttribute('scale', '0.333 0.333 0.333');
         arViewer.setAttribute('orientation', '0deg 180deg 0deg');
       } else if (modelName === '6667') {
-        // m84：横に180度回転のみ（サイズはそのまま1倍）
+        // ひまわり：横に180度回転のみ
         arViewer.setAttribute('scale', '1 1 1');
         arViewer.setAttribute('orientation', '30deg 180deg 0deg'); 
-      }else if ( modelName === '3500' || modelName === '50000') {
-        // m84：横に180度回転のみ（サイズはそのまま1倍）
+      } else if (modelName === '3500' || modelName === '50000') {
+        // 青いお花・あくまのお花：上下逆転などの調整
         arViewer.setAttribute('scale', '1 1 1');
-        arViewer.setAttribute('orientation', '30deg deg 180deg'); 
-      
-      else {
+        arViewer.setAttribute('orientation', '30deg 180deg 180deg'); // degを修正しました
+      } else {
         // その他：サイズそのまま、回転なし
         arViewer.setAttribute('scale', '1 1 1');
         arViewer.setAttribute('orientation', '0deg 0deg 0deg'); 
       }
       // ==========================================
-
       goTo('viewer-screen');
 
       const onLoad = () => {
