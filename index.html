@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>WebAR プロジェクト</title>
+  <style>
+    /* ===== リセット ===== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+        html, body {
+      width: 100%;
+      height: 100%;
+      overflow: hidden; /* ページ全体の「紙」自体がずれるのは禁止 */
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Meiryo", sans-serif;
+      background: #F2F2F7;
+      color: #1C1C1E;
+    }
+
+
+    /* ===== 画面共通 ===== */
+      .screen {
+      width: 100%;
+      height: 100vh;      /* min-height から height に変更して画面高さに固定 */
+      overflow-y: auto;   /* 中身がはみ出した時だけスクロールを許可 */
+      -webkit-overflow-scrolling: touch; /* iPhoneのスクロールを滑らかにする */
+      display: none; /* JSで切り替え */
+      padding: 60px 24px 48px;
+      max-width: 500px;
+      margin: 0 auto;
+      flex-direction: column;
+      animation: fadeIn 0.35s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+
+    .screen.active {
+      display: flex;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    h1 {
+      font-size: 34px;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 8px;
+    }
+
+    .subtitle {
+      font-size: 16px;
+      color: #8E8E93;
+      font-weight: 500;
+      margin-bottom: 40px;
+    }
+
+       /* ===== 戻るボタン ===== */
+    .back-btn {
+      display: block;
+      padding: 16px 24px;
+      background: #E5E5EA;
+      border: none;
+      border-radius: 16px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 16px;
+      color: #007AFF;
+      width: 100%;
+      margin-top: auto;
+      margin-bottom: calc(20px + env(safe-area-inset-bottom)); /* ← スマホに合わせて自動で最高の位置に調整！ */
+      transition: background 0.15s ease;
+    }
+
+    .back-btn:active { background: #D1D1D6; }
+
+    /* ===== スクリーン1：モード選択 ===== */
+    .mode-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .mode-btn {
+      padding: 24px 20px;
+      border: none;
+      border-radius: 24px;
+      font-size: 18px;
+      font-weight: 700;
+      cursor: pointer;
+      color: white;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      width: 100%;
+      transition: transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+    }
+
+    .mode-btn:active { transform: scale(0.96); }
+
+    .mode-btn-ar {
+      background: linear-gradient(135deg, #FF3B30, #FF2D55);
+      box-shadow: 0 10px 24px rgba(255, 45, 85, 0.25);
+    }
+
+    .mode-btn-viewer {
+      background: linear-gradient(135deg, #00C6FF, #0072FF);
+      box-shadow: 0 10px 24px rgba(0, 114, 255, 0.25);
+    }
+
+    .btn-icon {
+      font-size: 26px;
+      background: rgba(255,255,255,0.25);
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .btn-text {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 2px;
+    }
+
+    .btn-title {
+      font-size: 18px;
+      font-weight: 700;
+    }
+
+    .btn-desc {
+      font-size: 12px;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+
+    .info-text {
+      font-size: 13px;
+      color: #AEAEB2;
+      margin-top: 24px;
+      text-align: center;
+    }
+
+    /* ===== スクリーン2：モデル選択 ===== */
+    /* ↓ 追加・修正部分：カテゴリーレイアウト用 */
+    #model-buttons-container {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .category-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1C1C1E;
+      margin-bottom: -6px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #E5E5EA;
+    }
+
+    .model-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    /* ↑ 追加・修正ここまで */
+
+    .model-btn {
+      padding: 28px 10px;
+      border: none;
+      border-radius: 20px;
+      background: #fff;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 700;
+      color: #1C1C1E;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .model-btn:active {
+      transform: scale(0.94);
+      background: #F2F2F7;
+    }
+
+    .model-btn-personal {
+      grid-column: 1 / -1;
+      background: linear-gradient(135deg, #FF2D87, #FF8DC7);
+      color: #fff;
+      box-shadow: 0 4px 16px rgba(255, 45, 135, 0.3);
+      margin-bottom: 10px; /* 見出しとの間隔用 */
+    }
+
+    .model-btn-personal:active {
+      transform: scale(0.96);
+      background: linear-gradient(135deg, #e0206e, #f07daf);
+    }
+
+    /* ===== スクリーン3：ビューアー（フルスクリーン） ===== */
+    #viewer-screen {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #F2F2F7; 
+      padding: 0;
+      max-width: none;
+      margin: 0;
+      min-height: unset;
+      z-index: 1000;
+    }
+
+    #ar-viewer {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    /* ===== ビューアー上のUI（すりガラス） ===== */
+    .viewer-ui {
+      position: absolute;
+      background: rgba(255,255,255,0.7); 
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      border: 1px solid rgba(0,0,0,0.1); 
+      color: #1C1C1E; 
+      z-index: 10;
+    }
+
+    .viewer-label {
+      top: 20px;
+      left: 20px;
+      padding: 10px 16px;
+      border-radius: 20px;
+      font-size: 13px;
+      font-weight: 500;
+    }
+
+    .viewer-back-btn {
+      top: 20px;
+      right: 20px;
+      padding: 10px 20px;
+      border-radius: 20px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 14px;
+      transition: background 0.15s ease;
+    }
+
+    .viewer-back-btn:active {
+      background: rgba(255,255,255,0.3);
+    }
+
+    /* ===== ARカメラ起動ボタン ===== */
+    #ar-launch-btn {
+      position: absolute;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 20;
+      padding: 18px 44px;
+      background: linear-gradient(135deg, #FF3B30, #FF2D55);
+      color: #fff;
+      border: none;
+      border-radius: 60px;
+      font-size: 18px;
+      font-weight: 800;
+      cursor: pointer;
+      box-shadow: 0 8px 28px rgba(255, 45, 85, 0.5);
+      display: none; /* モデル読み込み完了後に表示 */
+      white-space: nowrap;
+      letter-spacing: 0.3px;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    #ar-launch-btn:active {
+      transform: translateX(-50%) scale(0.96);
+      box-shadow: 0 4px 14px rgba(255, 45, 85, 0.3);
+    }
+
+    /* ===== ローディング ===== */
+    #loading {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      backdrop-filter: blur(6px);
+      -webkit-backdrop-filter: blur(6px);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+    }
+
+    .loading-box {
+      background: rgba(28,28,30,0.9);
+      border-radius: 24px;
+      padding: 32px 40px;
+      text-align: center;
+      color: #fff;
+    }
+
+    .spinner {
+      width: 36px;
+      height: 36px;
+      border: 3px solid rgba(255,255,255,0.2);
+      border-top: 3px solid #fff;
+      border-radius: 50%;
+      animation: spin 0.9s linear infinite;
+      margin: 0 auto 16px;
+    }
+
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+
+    .loading-box p {
+      font-size: 15px;
+      font-weight: 500;
+    }
+
+    /* ===== エラー ===== */
+    #error-message {
+      position: fixed;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(255, 59, 48, 0.92);
+      color: #fff;
+      padding: 14px 24px;
+      border-radius: 16px;
+      font-size: 14px;
+      font-weight: 600;
+      max-width: 88vw;
+      text-align: center;
+      z-index: 300;
+      display: none;
+      box-shadow: 0 8px 24px rgba(255,59,48,0.3);
+    }
+  </style>
+</head>
+<body>
+
+  <div id="mode-screen" class="screen active">
+    <h1>ようこそ！✨</h1>
+    <p class="subtitle">見方を選んでください</p>
+
+    <div class="mode-buttons">
+
+      <button class="mode-btn mode-btn-ar" onclick="selectMode('ar')">
+        <span class="btn-icon">📱</span>
+        <span class="btn-text">
+          <span class="btn-title">ARで見る</span>
+          <span class="btn-desc">カメラで現実世界に重ねる</span>
+        </span>
+      </button>
+
+      <button class="mode-btn mode-btn-viewer" onclick="selectMode('viewer')">
+        <span class="btn-icon">👁️</span>
+        <span class="btn-text">
+          <span class="btn-title">3Dで見る</span>
+          <span class="btn-desc">画面の中でくるくる回せる</span>
+        </span>
+      </button>
+
+    </div>
+
+    <p class="info-text">QRコードを読んだ後もここから選べます</p>
+  </div>
+
+  <div id="model-screen" class="screen">
+    <h1>モデルを選ぶ</h1>
+    <p class="subtitle" id="model-screen-subtitle">モデルを選んでください</p>
+
+    <div id="model-buttons-container">
+    </div>
+
+    <button class="back-btn" onclick="goTo('mode-screen')">← 戻る</button>
+  </div>
+
+  <div id="viewer-screen" class="screen">
+
+    <div class="viewer-ui viewer-label">
+      <span id="viewer-model-label">---</span>
+    </div>
+
+    <button class="viewer-ui viewer-back-btn" onclick="backFromViewer()">✕ 戻る</button>
+
+    <model-viewer
+      id="ar-viewer"
+      src=""
+      ar
+      ar-modes="webxr scene-viewer quick-look"  
+      camera-controls
+      touch-action="pan-y"
+      auto-rotate
+      shadow-intensity="1"
+      exposure="1">
+    </model-viewer>
+
+    <button id="ar-launch-btn" onclick="launchAR()">
+      📷 ARカメラを起動する
+    </button>
+  </div>
+
+  <div id="loading">
+    <div class="loading-box">
+      <div class="spinner"></div>
+      <p id="loading-text">読み込み中...</p>
+    </div>
+  </div>
+
+  <div id="error-message"></div>
+
+  <script type="module">
+    import 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
+
+    // ===== モデル設定（カテゴリーごとにグループ化） =====
+    const MODEL_GROUPS = [
+      {
+        title: "🌸 お花シリーズ",
+        models: [
+          { name: 'flower', label: 'お花 🌸' },
+          { name: 'ohana',  label: 'デジタル生け花' }
+        ]
+      },
+      {
+        title: "🎈 その他",
+        models: [
+          { name: 'Balloon', label: '風船' },
+          { name: 'untitled', label: 'フォトスペース' }
+        ]
+      }
+    ];
+
+    // 全モデルのリストも作成（エラーチェックなどに使用）
+    const MODELS = MODEL_GROUPS.flatMap(group => group.models);
+
+    // ===== DOM =====
+    const modeScreen     = document.getElementById('mode-screen');
+    const modelScreen    = document.getElementById('model-screen');
+    const viewerScreen   = document.getElementById('viewer-screen');
+    const modelSubtitle  = document.getElementById('model-screen-subtitle');
+    const modelContainer = document.getElementById('model-buttons-container');
+    const viewerLabel    = document.getElementById('viewer-model-label');
+    const arViewer       = document.getElementById('ar-viewer');
+    const arLaunchBtn    = document.getElementById('ar-launch-btn');
+    const loadingEl      = document.getElementById('loading');
+    const loadingText    = document.getElementById('loading-text');
+    const errorEl        = document.getElementById('error-message');
+
+    // ===== 状態 =====
+    let currentMode   = null;  // 'ar' | 'viewer'
+    let pendingModel  = null;  // URLパラメータで指定されたモデル名（公開モデル・QR）
+    let personalModel = null;  // URLパラメータで指定された個人モデル名
+
+    // ===== 画面切り替え =====
+    function goTo(screenId) {
+      [modeScreen, modelScreen, viewerScreen].forEach(s => s.classList.remove('active'));
+      document.getElementById(screenId).classList.add('active');
+    }
+    window.goTo = goTo;
+
+    // ===== ユーティリティ =====
+    function showLoading(show, text = '読み込み中...') {
+      loadingEl.style.display = show ? 'flex' : 'none';
+      loadingText.textContent = text;
+    }
+
+    let errorTimer = null;
+    function showError(msg) {
+      errorEl.textContent    = msg;
+      errorEl.style.display  = 'block';
+      clearTimeout(errorTimer);
+      errorTimer = setTimeout(() => { errorEl.style.display = 'none'; }, 5000);
+    }
+
+    // ===== モード選択 =====
+    window.selectMode = function(mode) {
+      currentMode = mode;
+
+      if (pendingModel) {
+        // QRコードアクセス：モデル選択スキップ
+        loadModel(pendingModel);
+      } else {
+        // 通常アクセス：モデル選択画面へ
+        modelSubtitle.textContent = mode === 'ar'
+          ? 'ARで見るモデルを選んでください'
+          : '3Dで見るモデルを選んでください';
+        goTo('model-screen');
+      }
+    };
+
+    // ===== モデルボタン生成（見出し付きで生成） =====
+    function renderModelButtons() {
+      modelContainer.innerHTML = '';
+
+      // 個人モデルが指定されていたら最上部に特別枠ボタンを表示
+      if (personalModel) {
+        const btn = document.createElement('button');
+        btn.className = 'model-btn model-btn-personal';
+        btn.textContent = '✨ 特別枠';
+        btn.setAttribute('aria-label', '特別枠モデルを見る');
+        btn.onclick = () => loadModel(personalModel);
+        modelContainer.appendChild(btn);
+      }
+
+      // カテゴリーごとに見出しとボタンを生成する
+      MODEL_GROUPS.forEach(group => {
+        // 1. 見出し（h3）を作成
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'category-title';
+        titleEl.textContent = group.title;
+        modelContainer.appendChild(titleEl);
+
+        // 2. ボタンを並べるためのグリッド（2列）を作成
+        const gridEl = document.createElement('div');
+        gridEl.className = 'model-grid';
+        
+        // 3. グループの中のモデルボタンを作成してグリッドに入れる
+        group.models.forEach(model => {
+          const btn = document.createElement('button');
+          btn.className   = 'model-btn';
+          btn.textContent = model.label;
+          btn.onclick     = () => loadModel(model.name);
+          gridEl.appendChild(btn);
+        });
+        
+        // 4. 完成したグリッドを画面に追加
+        modelContainer.appendChild(gridEl);
+      });
+    }
+
+    // ===== モデル読み込み =====
+    function loadModel(modelName) {
+      let modelPath, modelLabel;
+
+      if (modelName.startsWith('personal/')) {
+        modelPath  = `./assets/models/${modelName}/model.glb`;
+        modelLabel = '特別モデル ✨';
+      } else {
+        const found = MODELS.find(m => m.name === modelName);
+        if (!found) {
+          showError(`❌ モデル「${modelName}」は登録されていません。`);
+          goTo('mode-screen');
+          return;
+        }
+        modelPath  = `./assets/models/${modelName}.glb`;
+        modelLabel = found.label;
+      }
+
+      showLoading(true, currentMode === 'ar' ? 'ARを準備中...' : 'モデルを読み込み中...');
+      viewerLabel.textContent    = modelLabel;
+      arLaunchBtn.style.display  = 'none';
+
+      arViewer.src = '';
+      arViewer.removeAttribute('ios-src'); 
+      arViewer.src = modelPath;
+
+      goTo('viewer-screen');
+
+      const onLoad = () => {
+        showLoading(false);
+        console.log(`✅ 「${modelName}」読み込み完了（モード: ${currentMode}）`);
+        cleanup();
+
+        if (currentMode === 'ar') {
+          if (arViewer.canActivateAR) {
+            arLaunchBtn.style.display = 'block';
+          } else {
+            showError('📵 このデバイスはARに対応していません。3Dビューアーとして表示します。');
+          }
+        }
+      };
+
+      const onError = () => {
+        showLoading(false);
+        showError(`❌ ${modelPath} が見つかりません。`);
+        goTo('mode-screen');
+        cleanup();
+      };
+
+      function cleanup() {
+        arViewer.removeEventListener('load', onLoad);
+        arViewer.removeEventListener('error', onError);
+      }
+
+      arViewer.addEventListener('load', onLoad);
+      arViewer.addEventListener('error', onError);
+    }
+
+    window.launchAR = async function() {
+      arLaunchBtn.style.display = 'none';
+      try {
+        if (arViewer.canActivateAR) {
+          await arViewer.activateAR();
+        } else {
+          showError('ARが利用できません');
+          arLaunchBtn.style.display = 'block';
+        }
+      } catch (e) {
+        console.error(e);
+        showError('AR起動に失敗しました');
+        arLaunchBtn.style.display = 'block';
+      }
+    };
+
+    // ===== ビューアーから戻る =====
+    window.backFromViewer = function() {
+      arViewer.src = '';
+      arViewer.removeAttribute('ios-src');
+      arLaunchBtn.style.display = 'none';
+
+      goTo(pendingModel ? 'mode-screen' : 'model-screen');
+    };
+
+    // ===== URLパラメータ確認（ディープリンク） =====
+    function handleDeepLink() {
+      const params    = new URLSearchParams(window.location.search);
+      const modelName = params.get('model');
+      if (!modelName) return;
+
+      if (modelName.startsWith('personal/')) {
+        if (!/^personal\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,49}$/.test(modelName)) {
+          showError('❌ 無効な個人モデル名です。');
+          return;
+        }
+        personalModel = modelName;
+        console.log(`🔗 個人モデル検出: model=${modelName} → 特別枠ボタンを表示`);
+        return;
+      }
+
+      const found = MODELS.find(m => m.name === modelName);
+      if (found) {
+        pendingModel = modelName;
+        console.log(`🔗 ディープリンク検出: model=${modelName} → モード選択後に起動`);
+      } else {
+        showError(`❌ モデル「${modelName}」は登録されていません。`);
+      }
+    }
+
+    // ===== 初期化 =====
+    document.addEventListener('DOMContentLoaded', () => {
+      handleDeepLink();
+      renderModelButtons();
+      if (pendingModel || personalModel || sessionStorage.getItem('splashDone')) {
+        goTo('mode-screen');
+      } else {
+        window.location.href = 'gamestart.html';
+      }
+    });
+
+    // ===== すべてのモデルでダブルタップ時にアニメーション再生 =====
+    let lastTapTime = 0;
+    let currentAnimationIndex = 0;
+
+    arViewer.addEventListener('touchend', function(event) {
+      const now = Date.now();
+      if (now - lastTapTime < 300) {
+        playAnimation();
+      }
+      lastTapTime = now;
+    });
+    
+    function playAnimation() {
+      const animations = arViewer.availableAnimations;
+      if (animations && animations.length > 0) {
+        arViewer.animationName = animations[currentAnimationIndex];
+        arViewer.play();
+        console.log(`✨ アニメーション再生: ${animations[currentAnimationIndex]}`);
+        currentAnimationIndex = (currentAnimationIndex + 1) % animations.length;
+      } else {
+        console.log('ℹ️ このモデルにはアニメーションが設定されていません');
+      }
+    }
+  </script>
+</body>
+</html>
