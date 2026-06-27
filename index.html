@@ -13,7 +13,7 @@
       -webkit-tap-highlight-color: transparent;
     }
 
-        html, body {
+    html, body {
       width: 100%;
       height: 100%;
       overflow: hidden; /* ページ全体の「紙」自体がずれるのは禁止 */
@@ -26,7 +26,7 @@
 
 
     /* ===== 画面共通 ===== */
-      .screen {
+    .screen {
       width: 100%;
       height: 100vh;      /* min-height から height に変更して画面高さに固定 */
       overflow-y: auto;   /* 中身がはみ出した時だけスクロールを許可 */
@@ -63,7 +63,7 @@
       margin-bottom: 40px;
     }
 
-       /* ===== 戻るボタン ===== */
+    /* ===== 戻るボタン ===== */
     .back-btn {
       display: block;
       padding: 16px 24px;
@@ -154,11 +154,26 @@
     }
 
     /* ===== スクリーン2：モデル選択 ===== */
+    #model-buttons-container {
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      margin-bottom: 30px;
+    }
+
+    .category-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1C1C1E;
+      margin-bottom: 4px;
+      padding-bottom: 6px;
+      border-bottom: 2px solid #E5E5EA;
+    }
+
     .model-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 14px;
-      margin-bottom: 30px;
     }
 
     .model-btn {
@@ -185,10 +200,11 @@
     }
 
     .model-btn-personal {
-      grid-column: 1 / -1;
+      width: 100%;
       background: linear-gradient(135deg, #FF2D87, #FF8DC7);
       color: #fff;
       box-shadow: 0 4px 16px rgba(255, 45, 135, 0.3);
+      margin-bottom: 10px;
     }
 
     .model-btn-personal:active {
@@ -197,7 +213,7 @@
     }
 
     /* ===== スクリーン3：ビューアー（フルスクリーン） ===== */
- #viewer-screen {
+    #viewer-screen {
       position: fixed;
       top: 0; left: 0;
       width: 100vw;
@@ -345,7 +361,6 @@
     <p class="subtitle">見方を選んでください</p>
 
     <div class="mode-buttons">
-
       <button class="mode-btn mode-btn-ar" onclick="selectMode('ar')">
         <span class="btn-icon">📱</span>
         <span class="btn-text">
@@ -361,7 +376,6 @@
           <span class="btn-desc">画面の中でくるくる回せる</span>
         </span>
       </button>
-
     </div>
 
     <p class="info-text">QRコードを読んだ後もここから選べます</p>
@@ -371,42 +385,33 @@
     <h1>モデルを選ぶ</h1>
     <p class="subtitle" id="model-screen-subtitle">モデルを選んでください</p>
 
-    <div class="model-grid" id="model-buttons-container">
-      </div>
+    <div id="model-buttons-container"></div>
 
     <button class="back-btn" onclick="goTo('mode-screen')">← 戻る</button>
   </div>
 
   <div id="viewer-screen" class="screen">
-
     <div class="viewer-ui viewer-label">
       <span id="viewer-model-label">---</span>
     </div>
 
     <button class="viewer-ui viewer-back-btn" onclick="backFromViewer()">✕ 戻る</button>
 
-<!-- 以下前書き換えたらarシステム消えた注意 -->
-<model-viewer
-  id="ar-viewer"
-  src=""
-  ar
-  ar-modes="webxr scene-viewer quick-look"  
-  camera-controls
-  touch-action="pan-y"
-  auto-rotate
-  shadow-intensity="1"
-  exposure="1">
-</model-viewer>
-
-<!-- ボタンが model-viewer の外にある！ -->
-<button id="ar-launch-btn" onclick="launchAR()">
-  📷 ARカメラを起動する
-</button>
+    <model-viewer
+      id="ar-viewer"
+      src=""
+      ar
+      ar-modes="webxr scene-viewer quick-look"  
+      camera-controls
+      touch-action="pan-y"
+      auto-rotate
+      shadow-intensity="1"
+      exposure="1">
+    </model-viewer>
 
     <button id="ar-launch-btn" onclick="launchAR()">
       📷 ARカメラを起動する
     </button>
-
   </div>
 
   <div id="loading">
@@ -421,13 +426,27 @@
   <script type="module">
     import 'https://ajax.googleapis.com/ajax/libs/model-viewer/3.4.0/model-viewer.min.js';
 
-    // ===== モデル設定 =====
-    const MODELS = [
-      { name: 'flower',   label: 'お花 🌸' },
-      { name: 'Balloon',   label: '風船' },
-      { name: 'ohana',   label: 'デジタル生け花' },
-      { name: 'untitled',   label: 'フォトスペース' },
+    // ===== モデル設定 (機能1, 2の統合) =====
+    const MODEL_SETTINGS = [
+      {
+        title: "🌸 お花シリーズ",
+        models: [
+          { name: 'flower', label: 'お花 🌸' },
+          { name: 'ohana',  label: 'デジタル生け花' },
+          { name: 'm84',    label: 'm84' }
+        ]
+      },
+      {
+        title: "🎈 その他",
+        models: [
+          { name: 'Balloon', label: '風船' },
+          { name: 'untitled', label: 'フォトスペース' }
+        ]
+      }
     ];
+    
+    // 既存の仕組みを壊さないようにMODELS配列を生成
+    const MODELS = MODEL_SETTINGS.flatMap(group => group.models);
 
     // ===== DOM =====
     const modeScreen     = document.getElementById('mode-screen');
@@ -469,11 +488,6 @@
     }
 
     // ===== モード選択 =====
-    /*
-     * ユーザーがARか3Dかを選んだ時点で currentMode を確定。
-     * ?model=xxx が付いていた場合（pendingModel）はモデル選択をスキップして
-     * そのままビューアーへ直行。なければモデル選択画面へ。
-     */
     window.selectMode = function(mode) {
       currentMode = mode;
 
@@ -489,7 +503,7 @@
       }
     };
 
-    // ===== モデルボタン生成 =====
+    // ===== モデルボタン生成 (機能1: カテゴリ分けの反映) =====
     function renderModelButtons() {
       modelContainer.innerHTML = '';
 
@@ -503,12 +517,25 @@
         modelContainer.appendChild(btn);
       }
 
-      MODELS.forEach(model => {
-        const btn = document.createElement('button');
-        btn.className   = 'model-btn';
-        btn.textContent = model.label;
-        btn.onclick     = () => loadModel(model.name);
-        modelContainer.appendChild(btn);
+      // カテゴリごとにボタンを描画
+      MODEL_SETTINGS.forEach(group => {
+        const titleEl = document.createElement('h3');
+        titleEl.className = 'category-title';
+        titleEl.textContent = group.title;
+        modelContainer.appendChild(titleEl);
+
+        const gridEl = document.createElement('div');
+        gridEl.className = 'model-grid';
+        
+        group.models.forEach(model => {
+          const btn = document.createElement('button');
+          btn.className   = 'model-btn';
+          btn.textContent = model.label;
+          btn.onclick     = () => loadModel(model.name);
+          gridEl.appendChild(btn);
+        });
+        
+        modelContainer.appendChild(gridEl);
       });
     }
 
@@ -538,6 +565,16 @@
       arViewer.src = '';
       arViewer.removeAttribute('ios-src'); // model-viewerの自動USDZ変換を使う
       arViewer.src = modelPath;
+
+      // ==========================================
+      // 🌟 機能2: m84モデルだけ裏表を反対（180度回転）にする 🌟
+      // ==========================================
+      if (modelName === 'm84') {
+        arViewer.setAttribute('orientation', '0deg 180deg 0deg'); 
+      } else {
+        arViewer.setAttribute('orientation', '0deg 0deg 0deg'); 
+      }
+      // ==========================================
 
       goTo('viewer-screen');
 
@@ -572,21 +609,21 @@
       arViewer.addEventListener('error', onError);
     }
 
-window.launchAR = async function() {
-  arLaunchBtn.style.display = 'none';
-  try {
-    if (arViewer.canActivateAR) {
-      await arViewer.activateAR();
-    } else {
-      showError('ARが利用できません');
-      arLaunchBtn.style.display = 'block';
-    }
-  } catch (e) {
-    console.error(e);
-    showError('AR起動に失敗しました');
-    arLaunchBtn.style.display = 'block';
-  }
-};
+    window.launchAR = async function() {
+      arLaunchBtn.style.display = 'none';
+      try {
+        if (arViewer.canActivateAR) {
+          await arViewer.activateAR();
+        } else {
+          showError('ARが利用できません');
+          arLaunchBtn.style.display = 'block';
+        }
+      } catch (e) {
+        console.error(e);
+        showError('AR起動に失敗しました');
+        arLaunchBtn.style.display = 'block';
+      }
+    };
 
     // ===== ビューアーから戻る =====
     window.backFromViewer = function() {
@@ -600,19 +637,13 @@ window.launchAR = async function() {
     };
 
     // ===== URLパラメータ確認（ディープリンク） =====
-    /*
-     * ?model=flower が付いていたらモデル名を pendingModel に保存するだけ。
-     * ?model=personal/01 が付いていたら personalModel に保存し、
-     * モデル選択画面に特別ボタンを表示する。
-     * QRを読んでも必ずモード選択を通る設計。
-     */
     function handleDeepLink() {
       const params    = new URLSearchParams(window.location.search);
       const modelName = params.get('model');
       if (!modelName) return;
 
       if (modelName.startsWith('personal/')) {
-        // 個人モデル：パストラバーサル防止のため英数字・ハイフン・アンダースコアのみ許可（最大50文字）
+        // 8にあったパストラバーサル防止チェックを維持
         if (!/^personal\/[a-zA-Z0-9][a-zA-Z0-9_-]{0,49}$/.test(modelName)) {
           showError('❌ 無効な個人モデル名です。');
           return;
@@ -635,6 +666,7 @@ window.launchAR = async function() {
     document.addEventListener('DOMContentLoaded', () => {
       handleDeepLink();  // personalModel / pendingModel をセット（あれば）
       renderModelButtons();  // personalModel が確定してからボタンを描画
+      // 8にあったスプラッシュ制御を維持
       if (pendingModel || personalModel || sessionStorage.getItem('splashDone')) {
         // QRコード経由・個人モデルURL・スプラッシュ完了：モード選択画面を表示
         goTo('mode-screen');
@@ -644,7 +676,7 @@ window.launchAR = async function() {
       }
     });
 
- // ===== すべてのモデルでダブルタップ時にアニメーション再生 =====
+    // ===== すべてのモデルでダブルタップ時にアニメーション再生 =====
     let lastTapTime = 0;
     let currentAnimationIndex = 0;
 
