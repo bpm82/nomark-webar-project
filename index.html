@@ -569,14 +569,14 @@
      // ==========================================
       // 🌟 機能2: モデルごとの個別調整（サイズ・向き） 🌟
       // ==========================================
-      if (modelName === 'flower' || modelName === 'ohana') {
-        // お花とデジタル生け花：サイズを1/3（33.3%）、正面を向くように回転
+      if (modelName === 'flower' ') {
+        // お花とデジタル生け花：サイズを1/3（33.3%）、横に180度回転
         arViewer.setAttribute('scale', '0.333 0.333 0.333');
-        arViewer.setAttribute('orientation', '180deg 0deg 0deg');
+        arViewer.setAttribute('orientation', '0deg 180deg 0deg');
       } else if (modelName === '6667') {
         // ひまわり：横に180度回転のみ
         arViewer.setAttribute('scale', '1 1 1');
-        arViewer.setAttribute('orientation', '30deg 180deg 0deg'); 
+        arViewer.setAttribute('orientation', '30deg 180deg 0eg'); // degを修正しました
       } else if (modelName === '3500' || modelName === '50000') {
         // 青いお花・あくまのお花：上下逆転などの調整
         arViewer.setAttribute('scale', '1 1 1');
